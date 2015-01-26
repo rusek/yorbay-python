@@ -1,0 +1,144 @@
+========================================== source(complexString, syntax=complexStringSyntax)
+<aaa "{{ 1 }}">
+========================================== syntax(complexStringSyntax)
+{
+    "type": "L20n",
+    "entries": [
+        {
+            "type": "Entity",
+            "id": {
+                "type": "Identifier",
+                "name": "aaa"
+            },
+            "value": {
+                "type": "ComplexString",
+                "content": [
+                    {
+                        "type": "Number",
+                        "value": 1
+                    }
+                ],
+                "source": "{{ 1 }}"
+            },
+            "index": null,
+            "attrs": null,
+            "local": false
+        }
+    ]
+}
+========================================== source(multipartComplexStringStartingWithChars, syntax=multipartComplexStringStartingWithCharsSyntax)
+<aaa "a{{ 1 }}{{ 2 }}b{{ "3" }}">
+========================================== syntax(multipartComplexStringStartingWithCharsSyntax)
+{
+    "type": "L20n",
+    "entries": [
+        {
+            "type": "Entity",
+            "id": {
+                "type": "Identifier",
+                "name": "aaa"
+            },
+            "value": {
+                "type": "ComplexString",
+                "content": [
+                    {
+                        "type": "String",
+                        "content": "a"
+                    },
+                    {
+                        "type": "Number",
+                        "value": 1
+                    },
+                    {
+                        "type": "Number",
+                        "value": 2
+                    },
+                    {
+                        "type": "String",
+                        "content": "b"
+                    },
+                    {
+                        "type": "String",
+                        "content": "3"
+                    }
+                ],
+                "source": "a{{ 1 }}{{ 2 }}b{{ \"3\" }}"
+            },
+            "index": null,
+            "attrs": null,
+            "local": false
+        }
+    ]
+}
+========================================== source(multipartComplexStringStartingWithPlaceholder, syntax=multipartComplexStringStartingWithPlaceholderSyntax)
+<aaa "{{ 1 }}b">
+========================================== syntax(multipartComplexStringStartingWithPlaceholderSyntax)
+{
+    "type": "L20n",
+    "entries": [
+        {
+            "type": "Entity",
+            "id": {
+                "type": "Identifier",
+                "name": "aaa"
+            },
+            "value": {
+                "type": "ComplexString",
+                "content": [
+                    {
+                        "type": "Number",
+                        "value": 1
+                    },
+                    {
+                        "type": "String",
+                        "content": "b"
+                    }
+                ],
+                "source": "{{ 1 }}b"
+            },
+            "index": null,
+            "attrs": null,
+            "local": false
+        }
+    ]
+}
+========================================== source(nestedComplexString, syntax=nestedComplexStringSyntax)
+<aaa "{{"{{1}}"}}">
+========================================== syntax(nestedComplexStringSyntax)
+{
+    "type": "L20n",
+    "entries": [
+        {
+            "type": "Entity",
+            "id": {
+                "type": "Identifier",
+                "name": "aaa"
+            },
+            "value": {
+                "type": "ComplexString",
+                "content": [
+                    {
+                        "type": "ComplexString",
+                        "content": [
+                            {
+                                "type": "Number",
+                                "value": 1
+                            }
+                        ],
+                        "source": "{{1}}"
+                    }
+                ],
+                "source": "{{\"{{1}}\"}}"
+            },
+            "index": null,
+            "attrs": null,
+            "local": false
+        }
+    ]
+}
+========================================== badSource(spaceInPlaceholderClose)
+<aaa "{{ 1 } }b">
+========================================== badSource(unclosedPlaceholder)
+<aaa "{{ 1
+========================================== badSource(invalidPlaceholderCloseSequence)
+<aaa "{{ 1 }?

@@ -1,0 +1,14 @@
+========================================== source(complexString)
+<abc "a{{ 'b' }}c">
+<a1c "a{{ 1 }}c">
+========================================== check(complexStringChecks, syntax=complexString)
+{
+    "abc": "abc",
+    "a1c": "a1c"
+}
+========================================== source(badComplexString)
+<boolean "{{ 1 == 1 }}">
+========================================== check(badComplexStringChecks, syntax=badComplexString)
+{
+    "boolean": false
+}

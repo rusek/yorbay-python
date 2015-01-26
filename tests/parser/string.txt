@@ -1,0 +1,28 @@
+========================================== source(emptyStringQuot, syntax=emptyStringSyntax)
+<aaa "">
+========================================== source(emptyStringApos, syntax=emptyStringSyntax)
+<aaa ''>
+========================================== source(emptyStringTripleQuot, syntax=emptyStringSyntax)
+<aaa """""">
+========================================== source(emptyStringTripleApos, syntax=emptyStringSyntax)
+<aaa ''''''>
+========================================== syntax(emptyStringSyntax)
+{
+    "type": "L20n",
+    "entries": [
+        {
+            "type": "Entity",
+            "id": {
+                "type": "Identifier",
+                "name": "aaa"
+            },
+            "value": {
+                "type": "String",
+                "content": ""
+            },
+            "index": null,
+            "attrs": null,
+            "local": false
+        }
+    ]
+}

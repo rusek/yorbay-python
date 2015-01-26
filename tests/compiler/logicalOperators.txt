@@ -1,0 +1,28 @@
+========================================== source(binaryOperators)
+<trueAndTrue "{{ 1 == 1 && 1 == 1 ? 'true' : 'false' }}">
+<trueAndFalse "{{ 1 == 1 && 1 == 2 ? 'true' : 'false' }}">
+<falseAndTrue "{{ 1 == 2 && 1 == 1 ? 'true' : 'false' }}">
+<falseAndFalse "{{ 1 == 2 && 1 == 2 ? 'true' : 'false' }}">
+
+<trueOrTrue "{{ 1 == 1 || 1 == 1 ? 'true' : 'false' }}">
+<trueOrFalse "{{ 1 == 1 || 1 == 2 ? 'true' : 'false' }}">
+<falseOrTrue "{{ 1 == 2 || 1 == 1 ? 'true' : 'false' }}">
+<falseOrFalse "{{ 1 == 2 || 1 == 2 ? 'true' : 'false' }}">
+
+<notTrue "{{ !(1 == 1) ? 'true' : 'false' }}">
+<notFalse "{{ !(1 == 2) ? 'true' : 'false' }}">
+========================================== check(binaryOperatorsChecks, syntax=binaryOperators)
+{
+    "trueAndTrue": "true",
+    "trueAndFalse": "false",
+    "falseAndTrue": "false",
+    "falseAndFalse": "false",
+
+    "trueOrTrue": "true",
+    "trueOrFalse": "true",
+    "falseOrTrue": "true",
+    "falseOrFalse": "false",
+
+    "notTrue": "false",
+    "notFalse": "true"
+}

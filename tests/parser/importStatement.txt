@@ -1,0 +1,19 @@
+========================================== source(importStatement, syntax=importStatementSyntax)
+import('xyz')
+========================================== syntax(importStatementSyntax)
+{
+    "type": "L20n",
+    "entries": [
+        {
+            "type": "ImportStatement",
+            "uri": {
+                "type": "String",
+                "content": "xyz"
+            }
+        }
+    ]
+}
+========================================== badSource(forbiddenSpaceAfterImportIdentifier)
+import ('xyz')
+========================================== badSource(missingCloseParenthesis)
+import('xyz'

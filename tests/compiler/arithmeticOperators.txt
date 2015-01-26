@@ -1,0 +1,20 @@
+========================================== source(binaryOperators)
+<twoPlusTwo "{{ 2 + 2 }}">
+<eightSubtractThree "{{ 8 - 3 }}">
+<twoTimesThree "{{ 2 * 3 }}">
+<tenDivideByFive "{{ 10 / 5 }}">
+========================================== check(binaryOperatorsChecks, syntax=binaryOperators)
+{
+    "eightSubtractThree": "5",
+    "twoPlusTwo": "4",
+    "twoTimesThree": "6",
+    "tenDivideByFive": "2"
+}
+========================================== source(unaryOperators)
+<minusThree "{{ -(3) }}">
+<plusThree "{{ +(3) }}">
+========================================== check(unaryOperatorsChecks, syntax=unaryOperators)
+{
+    "minusThree": "-3",
+    "plusThree": "3"
+}

@@ -1,0 +1,51 @@
+========================================== source(comment, syntax=commentSyntax)
+/*abc*/
+========================================== syntax(commentSyntax)
+{
+    "type": "L20n",
+    "entries": [
+        {
+            "type": "Comment",
+            "content": "abc"
+        }
+    ]
+}
+========================================== source(commentStartingWithSlash, syntax=commentStartingWithSlashSyntax)
+/*/abc*/
+========================================== syntax(commentStartingWithSlashSyntax)
+{
+    "type": "L20n",
+    "entries": [
+        {
+            "type": "Comment",
+            "content": "/abc"
+        }
+    ]
+}
+========================================== source(multiLineComment, syntax=multiLineCommentSyntax)
+/*ab
+c*/
+========================================== syntax(multiLineCommentSyntax)
+{
+    "type": "L20n",
+    "entries": [
+        {
+            "type": "Comment",
+            "content": "ab\nc"
+        }
+    ]
+}
+========================================== source(commentWithOpenInside, syntax=commentWithOpenInsideSyntax)
+/*a/*bc*/
+========================================== syntax(commentWithOpenInsideSyntax)
+{
+    "type": "L20n",
+    "entries": [
+        {
+            "type": "Comment",
+            "content": "a/*bc"
+        }
+    ]
+}
+========================================== badSource(unclosedComment)
+/*abc
