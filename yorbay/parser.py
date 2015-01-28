@@ -111,13 +111,13 @@ class Tokenizer(object):
                     raise ParseError('Invalid escape - missing trail surrogate')
                 uarg2 = self._parse_u_escape_arg(8)
                 if 0xdc00 <= uarg <= 0xdfff:  # trail surrogate
-                    return chr(0x10000 + (((uarg - 0xd800) << 10) | (uarg2 - 0xdc00))), 12
+                    return unichr(0x10000 + (((uarg - 0xd800) << 10) | (uarg2 - 0xdc00))), 12
                 else:
                     ParseError('Invalid escape - not a trail surrogate')
             elif 0xdc00 <= uarg <= 0xdfff:  # trail surrogate
                 raise ParseError('Invalid escape - trail surrogate')
             else:
-                return chr(uarg), 6
+                return unichr(uarg), 6
         else:
             return c, 2
 
@@ -395,7 +395,7 @@ class Parser(object):
             attrs = self.parse_attributes()
         else:
             if self.token.type != '>':
-                if self.ws_before:
+                if not self.ws_before:
                     raise self.error('Expected white space')  # xxxxxxxxxxxxxxxxx
                 attrs = self.parse_attributes()
             else:

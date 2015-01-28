@@ -1,0 +1,88 @@
+========================================== source(numberComparison)
+<twoLessThanTwo "{{ 2 < 2 ? 'true' : 'false' }}">
+<twoLessThanThree "{{ 2 < 3 ? 'true' : 'false' }}">
+<threeLessThanTwo "{{ 3 < 2 ? 'true' : 'false' }}">
+
+<twoLessEqualTwo "{{ 2 <= 2 ? 'true' : 'false' }}">
+<twoLessEqualThree "{{ 2 <= 3 ? 'true' : 'false' }}">
+<threeLessEqualTwo "{{ 3 <= 2 ? 'true' : 'false' }}">
+
+<twoGreaterThanTwo "{{ 2 > 2 ? 'true' : 'false' }}">
+<twoGreaterThanThree "{{ 2 > 3 ? 'true' : 'false' }}">
+<threeGreaterThanTwo "{{ 3 > 2 ? 'true' : 'false' }}">
+
+<twoGreaterEqualTwo "{{ 2 >= 2 ? 'true' : 'false' }}">
+<twoGreaterEqualThree "{{ 2 >= 3 ? 'true' : 'false' }}">
+<threeGreaterEqualTwo "{{ 3 >= 2 ? 'true' : 'false' }}">
+
+<twoEqualsTwo "{{ 2 == 2 ? 'true' : 'false' }}">
+<twoEqualsThree "{{ 2 == 3 ? 'true' : 'false' }}">
+<threeEqualsTwo "{{ 3 == 2 ? 'true' : 'false' }}">
+
+<twoNotEqualTwo "{{ 2 != 2 ? 'true' : 'false' }}">
+<twoNotEqualThree "{{ 2 != 3 ? 'true' : 'false' }}">
+<threeNotEqualTwo "{{ 3 != 2 ? 'true' : 'false' }}">
+========================================== check(numberComparisonChecks, syntax=numberComparison)
+{
+    "twoLessThanTwo": "false",
+    "twoLessThanThree": "true",
+    "threeLessThanTwo": "false",
+
+    "twoLessEqualTwo": "true",
+    "twoLessEqualThree": "true",
+    "threeLessEqualTwo": "false",
+
+    "twoGreaterThanTwo": "false",
+    "twoGreaterThanThree": "false",
+    "threeGreaterThanTwo": "true",
+
+    "twoGreaterEqualTwo": "true",
+    "twoGreaterEqualThree": "false",
+    "threeGreaterEqualTwo": "true",
+
+    "twoEqualsTwo": "true",
+    "twoEqualsThree": "false",
+    "threeEqualsTwo": "false",
+
+    "twoNotEqualTwo": "false",
+    "twoNotEqualThree": "true",
+    "threeNotEqualTwo": "true"
+}
+========================================== source(stringComparison)
+<aaEqualsAa "{{ 'aa' == 'aa' ? 'true' : 'false' }}">
+<aaEqualsAb "{{ 'aa' == 'ab' ? 'true' : 'false' }}">
+<abEqualsAbc "{{ 'ab' == 'abc' ? 'true' : 'false' }}">
+
+<aaNotEqualAa "{{ 'aa' != 'aa' ? 'true' : 'false' }}">
+<aaNotEqualAb "{{ 'aa' != 'ab' ? 'true' : 'false' }}">
+<abNotEqualAbc "{{ 'ab' != 'abc' ? 'true' : 'false' }}">
+========================================== check(stringComparisonChecks, syntax=stringComparison)
+{
+    "aaEqualsAa": "true",
+    "aaEqualsAb": "false",
+    "abEqualsAbc": "false",
+
+    "aaNotEqualAa": "false",
+    "aaNotEqualAb": "true",
+    "abNotEqualAbc": "true"
+}
+========================================== source(stringComparisonProperties)
+<isCaseSensitive "{{ 'aa' != 'Aa' ? 'true' : 'false' }}">
+<worksWithNulBytes "{{ 'A\u0000A' != 'A\u0000B' ? 'true' : 'false' }}">
+
+<aEntity "a">
+
+<equalsResolvesLeftArgument "{{ aEntity == 'a' ? 'true' : 'false' }}">
+<equalsResolvesRightArgument "{{ 'a' == aEntity ? 'true' : 'false' }}">
+<notEqualResolvesLeftArgument "{{ !(aEntity != 'a') ? 'true' : 'false' }}">
+<notEqualResolvesRightArgument "{{ !('a' != aEntity) ? 'true' : 'false' }}">
+========================================== check(stringComparisonPropertiesChecks, syntax=stringComparisonProperties)
+{
+    "isCaseSensitive": "true",
+    "worksWithNulBytes": "true",
+
+    "equalsResolvesLeftArgument": "true",
+    "equalsResolvesRightArgument": "true",
+    "notEqualResolvesLeftArgument": "true",
+    "notEqualResolvesRightArgument": "true"
+}

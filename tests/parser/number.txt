@@ -1,0 +1,26 @@
+========================================== source(number, syntax=numberSyntax)
+<a() { 957643 }>
+========================================== source(numberMayHaveUnfortunatelyLeadingZeros, syntax=numberSyntax)
+<a() { 0957643 }>
+========================================== syntax(numberSyntax)
+{
+    "type": "L20n",
+    "entries": [
+        {
+            "type": "Macro",
+            "id": {
+                "type": "Identifier",
+                "name": "a"
+            },
+            "args": [],
+            "expression": {
+                "type": "Number",
+                "value": 957643
+            }
+        }
+    ]
+}
+========================================== badSource(floatsAreNotSupported)
+<a() { 1.2 }>
+========================================== badSource(hexNotationIsNotSupported)
+<a() { 0x123 }>

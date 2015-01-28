@@ -22,3 +22,7 @@
 }
 ========================================== badSource(spaceAfterEntityStart)
 < aaa "">
+========================================== badSource(spaceBeforeIndexOpenBrackedIsForbidden)
+<aaa [$x] "">
+========================================== badSource(spaceAfterIndexCloseBrackedIsRequired)
+<aaa[$x]"">

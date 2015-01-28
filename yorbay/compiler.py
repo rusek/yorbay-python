@@ -15,31 +15,20 @@ def get_type(val):
 
 
 class Env(object):
-    def __init__(self, entries, vars):
+    def __init__(self, entries, vars, globals, this):
         self.entries = entries
         self.vars = vars
-        self.globals = {}
-        self.this = None
-        self._stack = []
-        self._vars = vars
-
-    def push(self, this, local_vars):
-        self._stack.append((self.this, self.vars))
-        new_vars = {}
-        new_vars.update(self._vars)
-        new_vars.update(local_vars)
+        self.globals = globals
         self.this = this
-        self.vars = new_vars
 
-    def pop(self):
-        self.this, self.vars = self._stack.pop()
+    def copy(self, this, local_vars=None):
+        if local_vars:
+            vars = self.vars.copy()
+            vars.update(local_vars)
+        else:
+            vars = self.vars
 
-    def capture(self):
-        return self.this, self.vars
-
-    def push_captured(self, state):
-        self._stack.append((self.this, self.vars))
-        self.this, self.vars = state
+        return Env(self.entries, vars, self.globals, this)
 
 
 class L20n(object):
@@ -47,7 +36,11 @@ class L20n(object):
         self._entries = entries
 
     def make_env(self, vars):
-        return Env(self._entries, vars)
+        entries = {}
+        env = Env(entries, vars, {}, None)
+        for k, v in self._entries.iteritems():
+            entries[k] = v.bind(env)
+        return env
 
     def get(self, name):
         return self._entries.get(name)
@@ -67,17 +60,46 @@ class Dispatcher(object):
         return self._dispatch_table[node.__class__.__name__](node, *args, **kwargs)
 
 
+class Resolvable(object):
+    def resolve_once(self):
+        raise NotImplementedError
+
+
+class BoundEntity(Resolvable):
+    def __init__(self, entity, env):
+        self._entity = entity
+        self._env = env.copy(self)
+
+    def invoke(self):
+        return self._entity._content.evaluate(self._env)
+
+    resolve = resolve_once = invoke
+
+    def __getitem__(self, key):
+        return self._entity._content.evaluate(self._env)[key]  # xxxx should be consistent with PropertyAccess!
+
+    def get_attribute(self, name):
+        return self._entity._attrs[name].evaluate(self._env)
+
+
 class CompiledEntity(object):
-    def __init__(self, name, content):
+    def __init__(self, name, content, attrs):
         self._name = name
         self._content = content
+        self._attrs = attrs
 
-    def invoke(self, env):
-        env.push(self, {})
-        try:
-            return self._content.evaluate(env)
-        finally:
-            env.pop()
+    def bind(self, env):
+        return BoundEntity(self, env)
+
+
+class BoundMacro(object):
+    def __init__(self, macro, env):
+        self._macro = macro
+        self._env = env
+
+    def invoke(self, args):
+        assert len(args) == len(self._macro._arg_names)
+        return self._macro._expr.evaluate(self._env.copy(self, dict(zip(self._macro._arg_names, args))))
 
 
 class CompiledMacro(object):
@@ -86,13 +108,8 @@ class CompiledMacro(object):
         self._arg_names = arg_names
         self._expr = expr
 
-    def invoke(self, env, args):
-        assert len(args) == len(self._arg_names)
-        env.push(self, dict(zip(self._arg_names, args)))
-        try:
-            return self._expr.evaluate(env)
-        finally:
-            env.pop()
+    def bind(self, env):
+        return BoundMacro(self, env)
 
 
 class CompiledExpr(object):
@@ -102,12 +119,10 @@ class CompiledExpr(object):
     def evaluate_resolved(self, env):
         val = self.evaluate(env)
         while True:
-            if isinstance(val, CompiledEntity):
-                val = val.invoke(env)
-            elif isinstance(val, LazyHash):
-                val = val.get_default()
+            if isinstance(val, Resolvable):
+                val = val.resolve_once()
             else:
-                assert get_type(val) is not OBJECT
+                assert get_type(val) is not OBJECT, val
                 return val
 
     def evaluate_bool(self, env):
@@ -347,9 +362,9 @@ class CompiledCall(CompiledExpr):
 
     def evaluate(self, env):
         callee_val = self._callee.evaluate(env)
-        assert isinstance(callee_val, CompiledMacro)
+        assert isinstance(callee_val, BoundMacro)
         args = [arg.evaluate(env) for arg in self._args]
-        return callee_val.invoke(env, args)
+        return callee_val.invoke(args)
 
 
 class CompiledPropertyAccess(CompiledExpr):
@@ -361,43 +376,62 @@ class CompiledPropertyAccess(CompiledExpr):
         expr_val = self._expr.evaluate(env)
         prop_val = self._prop.evaluate_string(env)
 
-        if isinstance(expr_val, CompiledEntity):
-            expr_val = expr_val.invoke(env)
-
         return expr_val[prop_val]  # xxxxxxx check if operation supported
 
 
-class LazyHash(object):
-    def __init__(self, env, items, default):
-        self._env = env
-        self._env_state = env.capture()
+class CompiledAttributeAccess(CompiledExpr):
+    def __init__(self, expr, attr):
+        self._expr = expr
+        self._attr = attr
+
+    def evaluate(self, env):
+        expr_val = self._expr.evaluate(env)
+        attr_val = self._attr.evaluate_string(env)
+
+        assert isinstance(expr_val, BoundEntity)
+        return expr_val.get_attribute(attr_val)
+
+
+class LazyHash(Resolvable):
+    def __init__(self, env, items, index_item, default):
+        self._env = env.copy(env.this)
         self._items = items
+        self._index_item = index_item
         self._default = default
 
     def __getitem__(self, key):
-        value = self._items[key]
-        self._env.push_captured(self._env_state)
         try:
-            return value.evaluate(self._env)
-        finally:
-            self._env.pop()
+            value = self._items[key]
+        except KeyError:
+            return self.get_default()
+        return value.evaluate(self._env)
 
     def get_default(self):
-        assert self._default, 'no default'
-        self._env.push_captured(self._env_state)
-        try:
+        if self._index_item is not None:
+            key = self._index_item.evaluate_string(self._env)
+            try:
+                value = self._items[key]
+            except KeyError:
+                pass
+            else:
+                return value.evaluate(self._env)
+
+        if self._default is not None:
             return self._default.evaluate(self._env)
-        finally:
-            self._env.pop()
+
+        assert False, 'hash key lookup failed'
+
+    resolve_once = get_default
 
 
 class CompiledHash(CompiledExpr):
-    def __init__(self, items, default):
+    def __init__(self, items, index_item, default):
         self._items = items
+        self._index_item = index_item
         self._default = default
 
     def evaluate(self, env):
-        return LazyHash(env, self._items, self._default)
+        return LazyHash(env, self._items, self._index_item, self._default)
 
 
 class CompiledThis(CompiledExpr):
@@ -420,10 +454,19 @@ compile_entry = Dispatcher()
 
 @compile_entry.register(type='Entity')
 def compile_entity(entity):
-    assert entity.value is not None
-    assert entity.index is None
-    assert entity.attrs is None
-    return entity.id.name, CompiledEntity(entity.id.name, compile_value(entity.value))
+    attrs = {}
+    for attr in entity.attrs or ():
+        index = () if entity.index is None else [compile_expression(index_item) for index_item in entity.index]
+        attrs[attr.key.name] = compile_value(attr.value, index)
+
+    return entity.id.name, CompiledEntity(
+        entity.id.name,
+        compile_value(
+            entity.value,
+            () if entity.index is None else [compile_expression(index_item) for index_item in entity.index]
+        ),
+        attrs
+    )
 
 
 @compile_entry.register(type='Macro')
@@ -432,15 +475,19 @@ def compile_macro(macro):
     return macro.id.name, CompiledMacro(macro.id.name, arg_names, compile_expression(macro.expression))
 
 
-def compile_hash(node):
+def compile_hash(node, index):
+    if index:
+        index_item, index_tail = index[0], index[1:]
+    else:
+        index_item, index_tail = None, ()
     default = None
     items = {}
     for item_node in node.content:
-        value = compile_expression(item_node.value)
+        value = compile_value(item_node.value, index_tail)
         if item_node.default:
             default = value
         items[item_node.key.name] = value
-    return CompiledHash(items, default)
+    return CompiledHash(items, index_item, default)
 
 
 def compile_property_expression(node):
@@ -452,13 +499,20 @@ def compile_property_expression(node):
     return CompiledPropertyAccess(expr, prop)
 
 
+def compile_attribute_expression(node):
+    expr = compile_expression(node.expression)
+    if node.computed:
+        attr = compile_expression(node.attribute)
+    else:
+        attr = CompiledString(node.attribute.name)
+    return CompiledAttributeAccess(expr, attr)
+
+
 expressions = {
-    'String': lambda node: CompiledString(node.content),
     'Number': lambda node: CompiledNumber(node.value),
     'Identifier': lambda node: CompiledIdentifier(node.name),
     'Variable': lambda node: CompiledVariable(node.id.name),
     'GlobalsExpression': lambda node: CompiledGlobals(node.id.name),
-    'ComplexString': lambda node: CompiledComplexString([compile_expression(item) for item in node.content]),
     'ConditionalExpression': lambda node: CompiledConditional(
         compile_expression(node.test), compile_expression(node.consequent), compile_expression(node.alternate)),
     'BinaryExpression': lambda node: binary_operators[node.operator.token](
@@ -470,47 +524,30 @@ expressions = {
     'CallExpression': lambda node: CompiledCall(
         compile_expression(node.callee), [compile_expression(arg) for arg in node.arguments]),
     'PropertyExpression': compile_property_expression,
-    'Hash': compile_hash,
+    'AttributeExpression': compile_attribute_expression,
     'ThisExpression': lambda node: CompiledThis(),
 }
 
+values = {
+    'String': lambda node, index: CompiledString(node.content),
+    'ComplexString': lambda node, index: CompiledComplexString([compile_expression(item) for item in node.content]),
+    'Hash': compile_hash,
+}
+
 # Missing: AttributeExpression
-# Missing entries: Entity with index, Entity with attributes
+# Missing entries: Entity with attributes
 
 
 def compile_expression(node):
-    return expressions[node.__class__.__name__](node)
+    name = node.__class__.__name__
+    if name in expressions:
+        return expressions[name](node)
+    else:
+        return values[name](node, ())
 
-compile_value = compile_expression
 
-
-# @compile_expression.register(type='String')
-# def compile_string(string):
-#     return CompiledString(string.content)
-#
-#
-# @compile_expression.register(type='Number')
-# def compile_number(node):
-#     return CompiledNumber(node.value)
-#
-#
-# @compile_expression.register(type='Identifier')
-# def compile_identifier(node):
-#     return CompiledIdentifier(node.name)
-#
-#
-# @compile_expression.register(type='ComplexString')
-# def compile_complex_string(node):
-#     return CompiledComplexString([compile_expression(item) for item in node.content])
-#
-#
-# @compile_expression.register(type='ConditionalExpression')
-# def compile_conditional_expression(node):
-#     return CompiledConditional(
-#         compile_expression(node.test),
-#         compile_expression(node.consequent),
-#         compile_expression(node.alternate),
-#     )
+def compile_value(node, index):
+    return values[node.__class__.__name__](node, index)
 
 
 binary_operators = {
@@ -528,20 +565,10 @@ binary_operators = {
 }
 
 
-# @compile_expression.register(type='BinaryExpression')
-# def compile_binary_expression(node):
-#     return binary_operators[node.operator.token](compile_expression(node.left), compile_expression(node.right))
-
-
 logical_operators = {
     '&&': CompiledAnd,
     '||': CompiledOr,
 }
-
-
-# @compile_expression.register(type='LogicalExpression')
-# def compile_binary_expression(node):
-#     return logical_operators[node.operator.token](compile_expression(node.left), compile_expression(node.right))
 
 
 unary_operators = {
@@ -551,16 +578,6 @@ unary_operators = {
 }
 
 
-# @compile_expression.register(type='UnaryExpression')
-# def compile_unary_expression(node):
-#     return unary_operators[node.operator.token](compile_expression(node.argument))
-#
-#
-# @compile_expression.register(type='ParenthesisExpression')
-# def compile_parenthesis_expression(node):
-#     return compile_expression(node.expression)
-
-
 def compile_and_resolve(l20n, name, **values):
     compiled_l20n = compile_l20n(l20n)
-    return compiled_l20n.get(name).invoke(compiled_l20n.make_env(values))
+    return compiled_l20n.make_env(values).entries[name].invoke()

@@ -3,12 +3,14 @@
 <eightSubtractThree "{{ 8 - 3 }}">
 <twoTimesThree "{{ 2 * 3 }}">
 <tenDivideByFive "{{ 10 / 5 }}">
+<tenModuloThree "{{ 10 % 3 }}">
 ========================================== check(binaryOperatorsChecks, syntax=binaryOperators)
 {
     "eightSubtractThree": "5",
     "twoPlusTwo": "4",
     "twoTimesThree": "6",
-    "tenDivideByFive": "2"
+    "tenDivideByFive": "2",
+    "tenModuloThree": "1"
 }
 ========================================== source(unaryOperators)
 <minusThree "{{ -(3) }}">

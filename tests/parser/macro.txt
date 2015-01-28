@@ -1,0 +1,69 @@
+========================================== source(macroWithoutArguments, syntax=macroWithoutArgumentsSyntax)
+<myMacro() { 1 }>
+========================================== syntax(macroWithoutArgumentsSyntax)
+{
+    "type": "L20n",
+    "entries": [
+        {
+            "type": "Macro",
+            "id": {
+                "type": "Identifier",
+                "name": "myMacro"
+            },
+            "args": [],
+            "expression": {
+                "type": "Number",
+                "value": 1
+            }
+        }
+    ]
+}
+========================================== source(macroWithArguments, syntax=macroWithArgumentsSyntax)
+<myMacro($arg1, $arg2) { 1 }>
+========================================== syntax(macroWithArgumentsSyntax)
+{
+    "type": "L20n",
+    "entries": [
+        {
+            "type": "Macro",
+            "id": {
+                "type": "Identifier",
+                "name": "myMacro"
+            },
+            "args": [
+                {
+                    "type": "Variable",
+                    "id": {
+                        "type": "Identifier",
+                        "name": "arg1"
+                    }
+                },
+                {
+                    "type": "Variable",
+                    "id": {
+                        "type": "Identifier",
+                        "name": "arg2"
+                    }
+                }
+            ],
+            "expression": {
+                "type": "Number",
+                "value": 1
+            }
+        }
+    ]
+}
+========================================== badSource(identifierInsteadOfVariable)
+<myMacro(arg) { 1 }>
+========================================== badSource(trailingCommaInArgumentList)
+<myMacro($arg,) { 1 }>
+========================================== badSource(spaceBeforeArgumentOpenParenthesis)
+<myMacro () { 1 }>
+========================================== source(noSpaceBeforeBodyOpenBrace, syntax=macroWithoutArgumentsSyntax)
+<myMacro(){ 1 }>
+========================================== source(spaceAfterBodyOpenBrace, syntax=macroWithoutArgumentsSyntax)
+<myMacro() { 1 } >
+========================================== badSource(localMacrosAreForbidden)
+<_myMacro() { 1 } >
+========================================== badSource(macroHasNoIndex)
+<myMacro[$a]() { 1 } >
