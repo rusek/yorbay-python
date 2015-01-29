@@ -109,10 +109,10 @@ class BadSourceSection(Section):
 
 
 class SourceSection(Section):
-    def __init__(self, name, source, syntax_name):
+    def __init__(self, name, source, syntax):
         super(SourceSection, self).__init__(name)
         self._source = source
-        self._syntax_name = syntax_name
+        self._syntax_name = syntax
 
     def run(self, env):
         try:
@@ -131,10 +131,10 @@ class SourceSection(Section):
 
 
 class SyntaxSection(Section):
-    def __init__(self, name, body, wrapper_name):
+    def __init__(self, name, body, wrapper):
         super(SyntaxSection, self).__init__(name)
         self._body = json.loads(body)
-        self._wrapper_name = wrapper_name
+        self._wrapper_name = wrapper
 
     def run(self, env):
         # This should be AST, but for now only JSON representation is used anyway
@@ -145,10 +145,10 @@ class SyntaxSection(Section):
 
 
 class CheckSection(Section):
-    def __init__(self, name, body, syntax_name):
+    def __init__(self, name, body, syntax):
         super(CheckSection, self).__init__(name)
         self._body = json.loads(body)
-        self._syntax_name = syntax_name
+        self._syntax_name = syntax
 
     def run(self, env):
         print '{0} * running {1}...'.format(env.step(), self.name)
@@ -214,11 +214,94 @@ class WrapperSection(Section):
         return self._wrapper
 
 
+class ParamParser(object):
+    def __init__(self, func, args, kwargs):
+        self._func = func
+        self._args = args
+        self._kwargs = kwargs
+
+    def _call(self):
+        return self._func(*self._args, **self._kwargs)
+
+    def first(self, name):
+        raise NotImplementedError
+
+    def next(self, name, prev):
+        raise NotImplementedError
+
+    def none(self, name):
+        raise NotImplementedError
+
+
+class OptionalParam(ParamParser):
+    def __init__(self, default, func, *args, **kwargs):
+        super(OptionalParam, self).__init__(func, args, kwargs)
+        self._default = default
+
+    def first(self, name):
+        return self._call()
+
+    def next(self, name, prev):
+        raise Exception('Duplicate parameter: {0}'.format(name))
+
+    def none(self, name):
+        return self._default
+
+
+class RequiredParam(ParamParser):
+    def __init__(self, func, *args, **kwargs):
+        super(RequiredParam, self).__init__(func, args, kwargs)
+
+    def first(self, name):
+        return self._call()
+
+    def next(self, name, prev):
+        raise Exception('Duplicate parameter: {0}'.format(name))
+
+    def none(self, name):
+        raise Exception('Missing parameter: {0}'.format(name))
+
+
+class ParamValues(object):
+    def __init__(self, values):
+        self._values = values
+
+    def __getattr__(self, name):
+        return self._values[name]
+
+
+class SectionParser(object):
+    def __init__(self, factory, **params):
+        self.factory = factory
+        self.params = params
+
+
 class HeaderParser(object):
     def __init__(self, header):
         self._toks = tokenize_header(header)
         self.type, self.value = None, None
         self.next()
+
+        self._sect_parsers = {
+            'source': SectionParser(
+                SourceSection,
+                syntax=OptionalParam(None, self.skip, 'ident'),
+            ),
+            'badSource': SectionParser(
+                BadSourceSection,
+            ),
+            'syntax': SectionParser(
+                SyntaxSection,
+                wrapper=OptionalParam(None, self.skip, 'ident'),
+            ),
+            'check': SectionParser(
+                CheckSection,
+                syntax=RequiredParam(self.skip, 'ident'),
+            ),
+            'wrapper': SectionParser(
+                WrapperSection,
+            ),
+        }
 
     def next(self):
         self.type, self.value = next(self._toks, ('eof', None))
@@ -245,89 +328,38 @@ class HeaderParser(object):
 
     def parse_header(self, body):
         sect_type = self.skip('ident')
-        if sect_type == 'badSource':
-            return self.parse_bad_source(body)
-        if sect_type == 'source':
-            return self.parse_source(body)
-        if sect_type == 'syntax':
-            return self.parse_syntax(body)
-        if sect_type == 'check':
-            return self.parse_check(body)
-        if sect_type == 'wrapper':
-            return self.parse_wrapper(body)
-        raise Exception('Invalid section type ' + sect_type)
-
-    def parse_wrapper(self, body):
+        try:
+            sect_parser = self._sect_parsers[sect_type]
+        except KeyError:
+            raise Exception('Invalid section type: {0}'.format(sect_type))
         self.skip('(')
         name = self.skip('ident')
+        if sect_parser.params:
+            param_values = self.parse_params(sect_parser.params)
+        else:
+            param_values = {}
         self.skip(')')
-        return WrapperSection(name, body)
+        return sect_parser.factory(name, body, **param_values)
 
-    def parse_syntax(self, body):
-        self.skip('(')
-        name = self.skip('ident')
-        param_values = self.parse_params(
-            optional=dict(
-                wrapper=lambda: self.skip('ident')
-            )
-        )
-        self.skip(')')
-        return SyntaxSection(name, body, param_values.get('wrapper'))
-
-    def parse_bad_source(self, body):
-        self.skip('(')
-        name = self.skip('ident')
-        self.skip(')')
-        return BadSourceSection(name, body)
-
-    def parse_source(self, body):
-        self.skip('(')
-        name = self.skip('ident')
-        syntax_name = None
-        if self.try_skip(','):
-            param_name = self.skip('ident')
-            if param_name == 'syntax':
-                if syntax_name is not None:
-                    raise Exception('Duplicate parameter syntax')
-                self.skip('=')
-                syntax_name = self.skip('ident')
-            else:
-                raise Exception('Invalid parameter name ' + param_name)
-        self.skip(')')
-        return SourceSection(name, body, syntax_name)
-
-    def parse_params(self, optional):
+    def parse_params(self, params):
         values = {}
 
         while self.try_skip(','):
             param_name = self.skip('ident')
-            if param_name in optional:
-                if param_name in values:
-                    raise Exception('Duplicate parameter: {0}'.format(param_name))
+            if param_name in params:
                 self.skip('=')
-                values[param_name] = optional[param_name]()
+                if param_name in values:
+                    values[param_name] = params[param_name].next(param_name, values[param_name])
+                else:
+                    values[param_name] = params[param_name].first(param_name)
             else:
-                raise Exception('Invalid parameter: ' + param_name)
+                raise Exception('Invalid parameter: {0}'.format(param_name))
+
+        for param_name, param in params.iteritems():
+            if param_name not in values:
+                values[param_name] = param.none(param_name)
 
         return values
-
-    def parse_check(self, body):
-        self.skip('(')
-        name = self.skip('ident')
-        syntax_name = None
-        if self.try_skip(','):
-            param_name = self.skip('ident')
-            if param_name == 'syntax':
-                if syntax_name is not None:
-                    raise Exception('Duplicate parameter syntax')
-                self.skip('=')
-                syntax_name = self.skip('ident')
-            else:
-                raise Exception('Invalid parameter name ' + param_name)
-        if syntax_name is None:
-            raise Exception('Missing parameter syntax')
-        self.skip(')')
-        return CheckSection(name, body, syntax_name)
 
 
 def build_section(header, body):
