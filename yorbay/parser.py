@@ -131,6 +131,26 @@ class Tokenizer(object):
         raise ParseError('Invalid escape')
 
 
+def describe_token(token):
+    if token.type in ('ident', 'num'):
+        return '"{0}"'.format(token.value)
+    elif token.type == 'var':
+        return '"${0}"'.format(token.value)
+    elif token.type == 'glob':
+        return '"@{0}"'.format(token.value)
+    elif token.type == 'str_start':
+        return 'string'
+    else:
+        return '"{0}"'.format(token.type)
+
+
+def describe_token_type(type):
+    if type == 'ident':
+        return 'identifier'
+    else:
+        return'"{0}"'.format(type)
+
+
 class Parser(object):
     def __init__(self, s):
         self._tokenizer = Tokenizer(s)
@@ -163,16 +183,7 @@ class Parser(object):
         elif self.token.type == 'eof':
             return self.error('Expected {0}, but end of input reached'.format(desc))
         else:
-            if self.token.type in ('ident', 'num'):
-                cur_desc = '"{0}"'.format(self.token.value)
-            elif self.token.type == 'var':
-                cur_desc = '"${0}"'.format(self.token.value)
-            elif self.token.type == 'glob':
-                cur_desc = '"@{0}"'.format(self.token.value)
-            elif self.token.type == 'str_start':
-                cur_desc = 'string'
-            else:
-                cur_desc = '"{0}"'.format(self.token.type)
+            cur_desc = describe_token(self.token)
 
             return self.error('Expected ' + desc + ', but got ' + cur_desc + ' instead')
 
@@ -180,10 +191,12 @@ class Parser(object):
         if self.token.type == type:
             self.next_token()
         else:
-            raise self.error_expected('"' + type + '"')
+            raise self.error_expected(describe_token_type(type))
 
-    def try_skip_token(self, type):
+    def try_skip_token(self, type, allow_ws_before=True):
         if self.token.type == type:
+            if not allow_ws_before and self.ws_before:
+                raise self.error('Unexpected white space before ' + describe_token(self.token))
             self.next_token()
             return True
         else:
@@ -297,11 +310,11 @@ class Parser(object):
     def parse_member_expression(self):
         exp = self.parse_parenthesis_expression()
         while True:
-            if self.try_skip_token('.'):
+            if self.try_skip_token('.', allow_ws_before=False):
                 exp = self.parse_property_expression(exp, False)
-            elif self.try_skip_token('['):
+            elif self.try_skip_token('[', allow_ws_before=False):
                 exp = self.parse_property_expression(exp, True)
-            elif self.try_skip_token('::'):
+            elif self.try_skip_token('::', allow_ws_before=False):
                 if self.token.type == '[':
                     if self.ws_before:
                         raise self.error('Unexpected white space between "::" and "["')
@@ -309,7 +322,7 @@ class Parser(object):
                     exp = self.parse_attribute_expression(exp, True)
                 else:
                     exp = self.parse_attribute_expression(exp, False)
-            elif self.try_skip_token('('):
+            elif self.try_skip_token('(', allow_ws_before=False):
                 exp = self.parse_call_expression(exp)
             else:
                 return exp

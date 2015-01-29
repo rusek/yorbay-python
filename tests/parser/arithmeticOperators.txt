@@ -1,0 +1,71 @@
+========================================== source(add, syntax=addSyntax)
+<a(){ 1 + 2 }>
+========================================== syntax(addSyntax, wrapper=exprWrapper)
+{
+    "type": "BinaryExpression",
+    "operator": {"type": "BinaryOperator", "token": "+"},
+    "left": {"type": "Number", "value": 1},
+    "right": {"type": "Number", "value": 2}
+}
+========================================== source(subtract, syntax=subtractSyntax)
+<a(){ 1 - 2 }>
+========================================== syntax(subtractSyntax, wrapper=exprWrapper)
+{
+    "type": "BinaryExpression",
+    "operator": {"type": "BinaryOperator", "token": "-"},
+    "left": {"type": "Number", "value": 1},
+    "right": {"type": "Number", "value": 2}
+}
+========================================== source(multiply, syntax=multiplySyntax)
+<a(){ 1 * 2 }>
+========================================== syntax(multiplySyntax, wrapper=exprWrapper)
+{
+    "type": "BinaryExpression",
+    "operator": {"type": "BinaryOperator", "token": "*"},
+    "left": {"type": "Number", "value": 1},
+    "right": {"type": "Number", "value": 2}
+}
+========================================== source(divide, syntax=divideSyntax)
+<a(){ 1 / 2 }>
+========================================== syntax(divideSyntax, wrapper=exprWrapper)
+{
+    "type": "BinaryExpression",
+    "operator": {"type": "BinaryOperator", "token": "/"},
+    "left": {"type": "Number", "value": 1},
+    "right": {"type": "Number", "value": 2}
+}
+========================================== source(modulo, syntax=moduloSyntax)
+<a(){ 1 % 2 }>
+========================================== syntax(moduloSyntax, wrapper=exprWrapper)
+{
+    "type": "BinaryExpression",
+    "operator": {"type": "BinaryOperator", "token": "%"},
+    "left": {"type": "Number", "value": 1},
+    "right": {"type": "Number", "value": 2}
+}
+========================================== source(positive, syntax=positiveSyntax)
+<a(){ +1 }>
+========================================== syntax(positiveSyntax, wrapper=exprWrapper)
+{
+    "type": "UnaryExpression",
+    "operator": {"type": "UnaryOperator", "token": "+"},
+    "argument": {"type": "Number", "value": 1}
+}
+========================================== source(negative, syntax=negativeSyntax)
+<a(){ -1 }>
+========================================== syntax(negativeSyntax, wrapper=exprWrapper)
+{
+    "type": "UnaryExpression",
+    "operator": {"type": "UnaryOperator", "token": "-"},
+    "argument": {"type": "Number", "value": 1}
+}
+========================================== wrapper(exprWrapper)
+{
+    "type": "L20n",
+    "entries": [{
+        "type": "Macro",
+        "id": {"type": "Identifier", "name": "a"},
+        "args": [],
+        "expression": "<HERE>"
+    }]
+}

@@ -1,0 +1,36 @@
+========================================== source(and, syntax=andSyntax)
+<a(){ 1 && 2 }>
+========================================== syntax(andSyntax, wrapper=exprWrapper)
+{
+    "type": "LogicalExpression",
+    "operator": {"type": "LogicalOperator", "token": "&&"},
+    "left": {"type": "Number", "value": 1},
+    "right": {"type": "Number", "value": 2}
+}
+========================================== source(or, syntax=orSyntax)
+<a(){ 1 || 2 }>
+========================================== syntax(orSyntax, wrapper=exprWrapper)
+{
+    "type": "LogicalExpression",
+    "operator": {"type": "LogicalOperator", "token": "||"},
+    "left": {"type": "Number", "value": 1},
+    "right": {"type": "Number", "value": 2}
+}
+========================================== source(not, syntax=notSyntax)
+<a(){ !1 }>
+========================================== syntax(notSyntax, wrapper=exprWrapper)
+{
+    "type": "UnaryExpression",
+    "operator": {"type": "UnaryOperator", "token": "!"},
+    "argument": {"type": "Number", "value": 1}
+}
+========================================== wrapper(exprWrapper)
+{
+    "type": "L20n",
+    "entries": [{
+        "type": "Macro",
+        "id": {"type": "Identifier", "name": "a"},
+        "args": [],
+        "expression": "<HERE>"
+    }]
+}

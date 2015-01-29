@@ -1,0 +1,64 @@
+========================================== source(equals, syntax=equalsSyntax)
+<a(){ 1 == 2 }>
+========================================== syntax(equalsSyntax, wrapper=exprWrapper)
+{
+    "type": "BinaryExpression",
+    "operator": {"type": "BinaryOperator", "token": "=="},
+    "left": {"type": "Number", "value": 1},
+    "right": {"type": "Number", "value": 2}
+}
+========================================== source(notEqual, syntax=notEqualSyntax)
+<a(){ 1 != 2 }>
+========================================== syntax(notEqualSyntax, wrapper=exprWrapper)
+{
+    "type": "BinaryExpression",
+    "operator": {"type": "BinaryOperator", "token": "!="},
+    "left": {"type": "Number", "value": 1},
+    "right": {"type": "Number", "value": 2}
+}
+========================================== source(lessThan, syntax=lessThanSyntax)
+<a(){ 1 < 2 }>
+========================================== syntax(lessThanSyntax, wrapper=exprWrapper)
+{
+    "type": "BinaryExpression",
+    "operator": {"type": "BinaryOperator", "token": "<"},
+    "left": {"type": "Number", "value": 1},
+    "right": {"type": "Number", "value": 2}
+}
+========================================== source(lessEqual, syntax=lessEqualSyntax)
+<a(){ 1 <= 2 }>
+========================================== syntax(lessEqualSyntax, wrapper=exprWrapper)
+{
+    "type": "BinaryExpression",
+    "operator": {"type": "BinaryOperator", "token": "<="},
+    "left": {"type": "Number", "value": 1},
+    "right": {"type": "Number", "value": 2}
+}
+========================================== source(greaterThan, syntax=greaterThanSyntax)
+<a(){ 1 > 2 }>
+========================================== syntax(greaterThanSyntax, wrapper=exprWrapper)
+{
+    "type": "BinaryExpression",
+    "operator": {"type": "BinaryOperator", "token": ">"},
+    "left": {"type": "Number", "value": 1},
+    "right": {"type": "Number", "value": 2}
+}
+========================================== source(greaterEqual, syntax=greaterEqualSyntax)
+<a(){ 1 >= 2 }>
+========================================== syntax(greaterEqualSyntax, wrapper=exprWrapper)
+{
+    "type": "BinaryExpression",
+    "operator": {"type": "BinaryOperator", "token": ">="},
+    "left": {"type": "Number", "value": 1},
+    "right": {"type": "Number", "value": 2}
+}
+========================================== wrapper(exprWrapper)
+{
+    "type": "L20n",
+    "entries": [{
+        "type": "Macro",
+        "id": {"type": "Identifier", "name": "a"},
+        "args": [],
+        "expression": "<HERE>"
+    }]
+}

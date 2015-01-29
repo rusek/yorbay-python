@@ -1,0 +1,38 @@
+========================================== source(staticAttribute, syntax=staticAttributeSyntax)
+<a(){ objName::attrName }>
+========================================== syntax(staticAttributeSyntax, wrapper=exprWrapper)
+{
+    "type": "AttributeExpression",
+    "expression": {"type": "Identifier", "name": "objName"},
+    "attribute": {"type": "Identifier", "name": "attrName"},
+    "computed": false
+}
+========================================== source(computedAttribute, syntax=computedAttributeSyntax)
+<a(){ objName::[nonAttrName] }>
+========================================== syntax(computedAttributeSyntax, wrapper=exprWrapper)
+{
+    "type": "AttributeExpression",
+    "expression": {"type": "Identifier", "name": "objName"},
+    "attribute": {"type": "Identifier", "name": "nonAttrName"},
+    "computed": true
+}
+========================================== badSource(spaceAfterDoubleColonIsForbidden)
+<a(){ objName:: propName }>
+========================================== badSource(spaceBeforeDoubleColonIsForbidden)
+<a(){ objName ::propName }>
+========================================== badSource(spaceBeforeAttributeAccessOpenBracketIsForbidden)
+<a(){ objName ::[nonPropName] }>
+========================================== badSource(spaceBetweenColonsIsForbidden)
+<a(){ objName: :[nonPropName] }>
+========================================== badSource(spaceAfterColonsIsForbidden)
+<a(){ objName:: [nonPropName] }>
+========================================== wrapper(exprWrapper)
+{
+    "type": "L20n",
+    "entries": [{
+        "type": "Macro",
+        "id": {"type": "Identifier", "name": "a"},
+        "args": [],
+        "expression": "<HERE>"
+    }]
+}

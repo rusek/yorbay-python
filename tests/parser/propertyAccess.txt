@@ -1,0 +1,34 @@
+========================================== source(staticProperty, syntax=staticPropertySyntax)
+<a(){ objName.propName }>
+========================================== syntax(staticPropertySyntax, wrapper=exprWrapper)
+{
+    "type": "PropertyExpression",
+    "expression": {"type": "Identifier", "name": "objName"},
+    "property": {"type": "Identifier", "name": "propName"},
+    "computed": false
+}
+========================================== source(computedProperty, syntax=computedPropertySyntax)
+<a(){ objName[nonPropName] }>
+========================================== syntax(computedPropertySyntax, wrapper=exprWrapper)
+{
+    "type": "PropertyExpression",
+    "expression": {"type": "Identifier", "name": "objName"},
+    "property": {"type": "Identifier", "name": "nonPropName"},
+    "computed": true
+}
+========================================== badSource(spaceAfterDotIsForbidden)
+<a(){ objName. propName }>
+========================================== badSource(spaceBeforeDotIsForbidden)
+<a(){ objName .propName }>
+========================================== badSource(spaceBeforeOpenBrackedIsForbidden)
+<a(){ objName [nonPropName] }>
+========================================== wrapper(exprWrapper)
+{
+    "type": "L20n",
+    "entries": [{
+        "type": "Macro",
+        "id": {"type": "Identifier", "name": "a"},
+        "args": [],
+        "expression": "<HERE>"
+    }]
+}

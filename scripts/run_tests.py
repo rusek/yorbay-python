@@ -122,6 +122,7 @@ class SourceSection(Section):
                 json_syntax = syntax.to_json()
                 expected_syntax = env.run_section(self._syntax_name, type=SyntaxSection)
                 if json_syntax != expected_syntax:
+                    print format_json_diff(expected_syntax, json_syntax),
                     raise Exception('Section ' + self.name + ': source is invalid, got ' + repr(json_syntax) +
                                     ', should be ' + repr(expected_syntax))
             return syntax
@@ -142,6 +143,42 @@ class SyntaxSection(Section):
             return env.run_section(self._wrapper_name, type=WrapperSection).wrap(self._body)
         else:
             return self._body
+
+
+def format_json_diff(expected, actual):
+    path = []
+    msg = None
+    while msg is None:
+        if isinstance(expected, dict) and isinstance(actual, dict):
+            if set(expected.iterkeys()) != set(actual.iterkeys()):
+                msg = '    expected keys: {0}\n    actual keys: {1}\n'.format(
+                    sorted(expected.iterkeys()), sorted(actual.iterkeys()))
+            else:
+                for k, v in expected.iteritems():
+                    if v != actual[k]:
+                        path.append(k)
+                        expected, actual = v, actual[k]
+                        break
+                else:
+                    raise Exception('Impossible')
+        elif isinstance(expected, list) and isinstance(actual, list):
+            if len(expected) != len(actual):
+                msg = '    expected length: {0}\n    actual length: {1}\n'.format(
+                    len(expected), len(actual))
+            else:
+                for k, (v1, v2) in enumerate(zip(expected, actual)):
+                    if v1 != v2:
+                        path.append(k)
+                        expected, actual = v1, v2
+                        break
+                else:
+                    raise Exception('Impossible')
+        else:
+            msg = '    expected: {0}\n    actual: {1}\n'.format(expected, actual)
+    if path:
+        return 'Objects differ on {0}:\n'.format('.'.join(map(unicode, path))) + msg
+    else:
+        return 'Objects differ:\n'.format(path) + msg
 
 
 class CheckSection(Section):

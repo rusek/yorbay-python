@@ -1,0 +1,33 @@
+========================================== source(call, syntax=callSyntax)
+<a(){ func(arg1, arg2) }>
+========================================== syntax(callSyntax, wrapper=exprWrapper)
+{
+    "type": "CallExpression",
+    "callee": {"type": "Identifier", "name": "func"},
+    "arguments": [
+        {"type": "Identifier", "name": "arg1"},
+        {"type": "Identifier", "name": "arg2"}
+    ]
+}
+========================================== source(callWithoutArguments, syntax=callWithoutArgumentsSyntax)
+<a(){ func() }>
+========================================== syntax(callWithoutArgumentsSyntax, wrapper=exprWrapper)
+{
+    "type": "CallExpression",
+    "callee": {"type": "Identifier", "name": "func"},
+    "arguments": []
+}
+========================================== badSource(spaceBeforeOpenParenthesisIsForbidden)
+<a(){ func () }>
+========================================== badSource(trailingCommaIsForbidden)
+<a(){ func(arg1,) }>
+========================================== wrapper(exprWrapper)
+{
+    "type": "L20n",
+    "entries": [{
+        "type": "Macro",
+        "id": {"type": "Identifier", "name": "a"},
+        "args": [],
+        "expression": "<HERE>"
+    }]
+}

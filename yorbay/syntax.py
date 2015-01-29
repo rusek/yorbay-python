@@ -222,7 +222,8 @@ class CallExpression(object):
         self.arguments = arguments
 
     def to_json(self):
-        return dict(type='CallExpression', callee=self.callee, arguments=[arg.to_json() for arg in self.arguments])
+        return dict(type='CallExpression', callee=self.callee.to_json(),
+                    arguments=[arg.to_json() for arg in self.arguments])
 
 
 class Number(object):
