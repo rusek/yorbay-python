@@ -9,7 +9,7 @@ import traceback
 sys.path[0] = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 from yorbay import loads_syntax, ParseError
-from yorbay.compiler import compile_l20n
+from yorbay.compiler import compile_syntax
 
 
 def tokenize_header(header):
@@ -191,11 +191,11 @@ class CheckSection(Section):
         print '{0} * running {1}...'.format(env.step(), self.name)
         # Should accept either SyntaxSection or SourceSection, but currently SyntaxSection returns JSON and there's
         # no way to convert it to AST
-        compiled_l20n = compile_l20n(env.run_section(self._syntax_name, type=SourceSection))
+        compiled_l20n = compile_syntax(env.run_section(self._syntax_name, type=SourceSection))
         for entry_name, expectation in self._body.iteritems():
             print '{0}    * checking {1}...'.format(env.step(), entry_name)
             try:
-                result = compiled_l20n.make_env({}).entries[entry_name].resolve()
+                result = compiled_l20n.make_env({}).resolve_entity(entry_name)
             except:
                 if expectation is not False:
                     traceback.print_exc()

@@ -4,6 +4,7 @@
 <twoTimesThree "{{ 2 * 3 }}">
 <tenDivideByFive "{{ 10 / 5 }}">
 <tenModuloThree "{{ 10 % 3 }}">
+<tenDivideByFourTimesTwo "{{ (10 / 4) * 2 }}"> /* FIXME */
 ========================================== check(binaryOperatorsChecks, syntax=binaryOperators)
 {
     "eightSubtractThree": "5",

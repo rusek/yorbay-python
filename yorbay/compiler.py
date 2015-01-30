@@ -21,6 +21,13 @@ class Env(object):
         self.globals = globals
         self.this = this
 
+    def resolve_entity(self, name):
+        entry = self.entries[name]
+        if isinstance(entry, BoundEntity):
+            return entry.resolve()
+        else:
+            raise TypeError('Not an entity: {0}'.format(type(entry)))
+
     def copy(self, this, local_vars=None):
         if local_vars:
             vars = self.vars.copy()
@@ -31,19 +38,18 @@ class Env(object):
         return Env(self.entries, vars, self.globals, this)
 
 
-class L20n(object):
+class CompiledL20n(object):
     def __init__(self, entries):
         self._entries = entries
 
-    def make_env(self, vars):
+    def make_env(self, vars=None):
+        if vars is None:
+            vars = {}
         entries = {}
         env = Env(entries, vars, {}, None)
         for k, v in self._entries.iteritems():
             entries[k] = v.bind(env)
         return env
-
-    def get(self, name):
-        return self._entries.get(name)
 
 
 class Dispatcher(object):
@@ -98,7 +104,8 @@ class BoundMacro(object):
         self._env = env
 
     def invoke(self, args):
-        assert len(args) == len(self._macro._arg_names)
+        if len(args) != len(self._macro._arg_names):
+            raise TypeError('Required {0} argument(s), got {1}'.format(len(self._macro._arg_names), len(args)))
         return self._macro._expr.evaluate(self._env.copy(self, dict(zip(self._macro._arg_names, args))))
 
 
@@ -122,32 +129,36 @@ class CompiledExpr(object):
             if isinstance(val, Resolvable):
                 val = val.resolve_once()
             else:
-                assert get_type(val) is not OBJECT, val
+                if get_type(val) is OBJECT:
+                    raise TypeError('Required primitive type, got {0}'.format(type(val)))
                 return val
 
     def evaluate_bool(self, env):
         val = self.evaluate_resolved(env)
-        assert get_type(val) is BOOL
+        if get_type(val) is not BOOL:
+            raise TypeError('Required boolean, got {0}'.format(type(val)))
         return val
 
     def evaluate_string(self, env):
         val = self.evaluate_resolved(env)
-        assert get_type(val) is STRING
+        if get_type(val) is not STRING:
+            raise TypeError('Required string, got {0}'.format(type(val)))
         return val
 
     def evaluate_number(self, env):
         val = self.evaluate_resolved(env)
-        assert get_type(val) is NUMBER
+        if get_type(val) is not STRING:
+            raise TypeError('Required number, got {0}'.format(type(val)))
         return val
 
     def evaluate_placeable(self, env, buf):
-        val = self.evaluate_resolved(env)
-        type = get_type(val)
-        if type is NUMBER:
-            val = str(val)
-        else:
-            assert type is STRING
-        buf.append(val)
+        value = self.evaluate_resolved(env)
+        value_type = get_type(value)
+        if value_type is NUMBER:
+            value = str(value)
+        elif value_type is not STRING:
+            raise TypeError('Required number or string, got {0}'.format(type(value)))
+        buf.append(value)
 
 
 class CompiledConditional(CompiledExpr):
@@ -178,6 +189,11 @@ class CompiledNumber(CompiledLiteral):
     evaluate_number = evaluate
 
 
+class CompiledNull(CompiledExpr):
+    def evaluate(self, env):
+        return None
+
+
 class CompiledString(CompiledLiteral):
     def evaluate(self, env):
         return self._value
@@ -198,7 +214,8 @@ class CompiledEquals(CompiledBinary):
     def evaluate(self, env):
         left, right = self._left.evaluate_resolved(env), self._right.evaluate_resolved(env)
         left_type, right_type = get_type(left), get_type(right)
-        assert left_type is right_type and (left_type is NUMBER or left_type is STRING)
+        if left_type is not right_type or (left_type is not NUMBER and left_type is not STRING):
+            raise TypeError('Required either numbers or strings, got {0} and {1}'.format(type(left), type(right)))
         return left == right
 
     evaluate_bool = evaluate
@@ -208,7 +225,8 @@ class CompiledNotEqual(CompiledBinary):
     def evaluate(self, env):
         left, right = self._left.evaluate_resolved(env), self._right.evaluate_resolved(env)
         left_type, right_type = get_type(left), get_type(right)
-        assert left_type is right_type and (left_type is NUMBER or left_type is STRING)
+        if left_type is not right_type or (left_type is not NUMBER and left_type is not STRING):
+            raise TypeError('Required either numbers or strings, got {0} and {1}'.format(type(left), type(right)))
         return left != right
 
     evaluate_bool = evaluate
@@ -246,7 +264,8 @@ class CompiledAdd(CompiledBinary):
     def evaluate(self, env):
         left, right = self._left.evaluate_resolved(env), self._right.evaluate_resolved(env)
         left_type, right_type = get_type(left), get_type(right)
-        assert left_type is right_type and (left_type is NUMBER or left_type is STRING)
+        if left_type is not right_type or (left_type is not NUMBER and left_type is not STRING):
+            raise TypeError('Required either numbers or strings, got {0} and {1}'.format(type(left), type(right)))
         return left + right
 
 
@@ -362,7 +381,8 @@ class CompiledCall(CompiledExpr):
 
     def evaluate(self, env):
         callee_val = self._callee.evaluate(env)
-        assert isinstance(callee_val, BoundMacro)
+        if not isinstance(callee_val, BoundMacro):
+            raise TypeError('Required macro, got {0}'.format(type(callee_val)))
         args = [arg.evaluate(env) for arg in self._args]
         return callee_val.invoke(args)
 
@@ -388,7 +408,8 @@ class CompiledAttributeAccess(CompiledExpr):
         expr_val = self._expr.evaluate(env)
         attr_val = self._attr.evaluate_string(env)
 
-        assert isinstance(expr_val, BoundEntity)
+        if not isinstance(expr_val, BoundEntity):
+            raise TypeError('Required entity, got {0}'.format(type(expr_val)))
         return expr_val.get_attribute(attr_val)
 
 
@@ -419,7 +440,7 @@ class LazyHash(Resolvable):
         if self._default is not None:
             return self._default.evaluate(self._env)
 
-        assert False, 'hash key lookup failed'
+        raise KeyError('Hash key lookup failed')
 
     resolve_once = get_default
 
@@ -439,17 +460,18 @@ class CompiledThis(CompiledExpr):
         return env.this
 
 
-def compile_l20n(l20n):
+def compile_syntax(l20n):
     entries = {}
     for entry in l20n.entries:
         compiled_entry = compile_entry(entry)
         if compiled_entry is not None:
             k, v = compiled_entry
             entries[k] = v
-    return L20n(entries)
+    return CompiledL20n(entries)
 
 
 compile_entry = Dispatcher()
+compile_entry.register(type='Comment')(lambda node: None)
 
 
 @compile_entry.register(type='Entity')
@@ -459,12 +481,17 @@ def compile_entity(entity):
         index = () if entity.index is None else [compile_expression(index_item) for index_item in entity.index]
         attrs[attr.key.name] = compile_value(attr.value, index)
 
-    return entity.id.name, CompiledEntity(
-        entity.id.name,
-        compile_value(
+    if entity.value is not None:
+        content = compile_value(
             entity.value,
             () if entity.index is None else [compile_expression(index_item) for index_item in entity.index]
-        ),
+        )
+    else:
+        content = CompiledNull()
+
+    return entity.id.name, CompiledEntity(
+        entity.id.name,
+        content,
         attrs
     )
 
@@ -534,9 +561,6 @@ values = {
     'Hash': compile_hash,
 }
 
-# Missing: AttributeExpression
-# Missing entries: Entity with attributes
-
 
 def compile_expression(node):
     name = node.__class__.__name__
@@ -576,8 +600,3 @@ unary_operators = {
     '-': CompiledNegate,
     '+': CompiledPositive,
 }
-
-
-def compile_and_resolve(l20n, name, **values):
-    compiled_l20n = compile_l20n(l20n)
-    return compiled_l20n.make_env(values).entries[name].invoke()
