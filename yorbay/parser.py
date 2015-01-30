@@ -16,7 +16,9 @@ _safe_str_chars_re = re.compile(r'''[^{'"\\]+''')
 
 
 class ParseError(Exception):
-    pass
+    def __init__(self, msg, pos):
+        super(ParseError, self).__init__('Line {0}: {1}'.format(pos.line, msg))
+        self.pos = pos
 
 
 # Token types:
@@ -33,14 +35,27 @@ class Token(object):
 class Tokenizer(object):
     def __init__(self, s):
         self._s = s
-        self._pos = 0
+        self._pos = 0  # current position in input string
+        self._line = 1  # current line (counting from line)
+        self._line_start = 0  # position where current line starts
         self._size = len(s)
 
     def get_offset(self):
         return self._pos
 
+    def get_position(self):
+        return syntax.Position(self._line, self._pos - self._line_start)
+
     def get_source(self, start, end):
         return self._s[start:end]
+
+    def _linescan(self, scan_start):
+        # Uncomment to verify that no newline is skipped by accident
+        # assert scan_start <= self._pos and '\n' not in self._s[self._line_start:scan_start]
+        pos = self._s.rfind('\n', scan_start, self._pos)
+        if pos != -1:
+            self._line += self._s.count('\n', scan_start, pos) + 1
+            self._line_start = pos + 1
 
     def next_token(self):
         if self._pos == self._size:
@@ -48,17 +63,21 @@ class Tokenizer(object):
 
         match = _token_re.match(self._s, self._pos)
         if not match:
-            raise ParseError('Invalid token ' + self._s[self._pos])
+            raise ParseError('Unrecognized character: "{0}"'.format(self._s[self._pos]), pos=self.get_position())
 
         self._pos = match.end()
         if match.start(1) != -1:
             type, value = 'ws', None
+            self._linescan(match.start())
         elif match.start(2) != -1:
             comment_end = self._s.find('*/', self._pos)
             if comment_end == -1:
-                raise ParseError('Unclosed comment')
+                self._pos = self._size
+                self._linescan(match.end())
+                raise ParseError('Unclosed comment', pos=self.get_position())
             type, value = 'comment', self._s[self._pos: comment_end]
-            self._pos = comment_end + 2
+            self._pos = comment_end + 2  # skip '*/'
+            self._linescan(match.end())
         elif match.start(3) != -1:
             ident = match.group(3)
             if ident[0] == '@':
@@ -82,40 +101,50 @@ class Tokenizer(object):
             return Token('eof', None)
 
         if self._s[self._pos: self._pos + len(delim)] == delim:
-            type, value, size = 'str_end', None, len(delim)
+            type, value = 'str_end', None
+            self._pos += len(delim)
         elif self._s[self._pos: self._pos + 2] == '{{':
-            type, value, size = 'expr_start', None, 2
+            type, value = 'expr_start', None
+            self._pos += 2
         elif self._s[self._pos] == '\\':
             type = 'str'
             value, size = self._parse_escape()
+            scan_start = self._pos
+            self._pos += size
+            self._linescan(scan_start)
         else:
-            type, value, size = 'str', self._s[self._pos], 1
+            type, value = 'str', self._s[self._pos]
+            scan_start = self._pos
             match = _safe_str_chars_re.match(self._s, self._pos + 1)
             if match:
-                extra = match.group()
-                value += extra
-                size += len(extra)
+                value += match.group()
+                self._pos = match.end()
+            else:
+                self._pos += 1
+            self._linescan(scan_start)
 
-        self._pos += size
         # print '<NEXT TEXT TOKEN>', type, value
         return Token(type, value)
 
     def _parse_escape(self):
         if self._size - self._pos < 2:
-            raise ParseError('Invalid escape')
+            raise ParseError('Invalid escape', pos=self.get_position())
         c = self._s[self._pos + 1]
         if c == 'u':
             uarg = self._parse_u_escape_arg(2)
-            if 0xd800 <= uarg <= 0xdbff:  # lead surrogate
-                if self._s[self._pos + 6, self._pos + 8] != '\\u':
-                    raise ParseError('Invalid escape - missing trail surrogate')
+            if 0xd800 <= uarg <= 0xdbff:  # high surrogate
+                if self._s[self._pos + 6: self._pos + 8] != '\\u':
+                    raise ParseError('Invalid escape - missing low surrogate', pos=self.get_position())
                 uarg2 = self._parse_u_escape_arg(8)
-                if 0xdc00 <= uarg <= 0xdfff:  # trail surrogate
+                if 0xdc00 <= uarg2 <= 0xdfff:  # low surrogate
                     return unichr(0x10000 + (((uarg - 0xd800) << 10) | (uarg2 - 0xdc00))), 12
                 else:
-                    ParseError('Invalid escape - not a trail surrogate')
-            elif 0xdc00 <= uarg <= 0xdfff:  # trail surrogate
-                raise ParseError('Invalid escape - trail surrogate')
+                    raise ParseError(
+                        'Invalid escape - not a low surrogate',
+                        pos=syntax.Position(self._line, self._pos + 6 - self._line_start)
+                    )
+            elif 0xdc00 <= uarg <= 0xdfff:  # low surrogate
+                raise ParseError('Invalid escape - low surrogate', pos=self.get_position())
             else:
                 return unichr(uarg), 6
         else:
@@ -128,7 +157,7 @@ class Tokenizer(object):
                 return int(cs, 16)
             except ValueError:
                 pass
-        raise ParseError('Invalid escape')
+        raise ParseError('Invalid escape', pos=self.get_position())
 
 
 def describe_token(token):
@@ -155,16 +184,20 @@ class Parser(object):
     def __init__(self, s):
         self._tokenizer = Tokenizer(s)
         self.token = None
+        self.pos = None
         self.ws_before = False
         self.next_token()
 
     def next_token(self):
+        pos = self._tokenizer.get_position()
         token = self._tokenizer.next_token()
         if token.type == 'ws':
             ws_before = True
+            pos = self._tokenizer.get_position()
             token = self._tokenizer.next_token()
         else:
             ws_before = False
+        self.pos = pos
         self.token = token
         self.ws_before = ws_before
 
@@ -174,7 +207,7 @@ class Parser(object):
 
     def error(self, msg):
         # print '<CURRENT TOKEN>', self.token.type, self.token.value  # xxxxxxxxxxxx
-        return ParseError(msg)
+        return ParseError(msg, pos=self.pos)
 
     def error_expected(self, desc):
         # str_start

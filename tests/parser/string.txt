@@ -1,30 +1,15 @@
 ========================================== source(emptyStringQuot, syntax=emptyStringSyntax)
-<aaa "">
+<a "">
 ========================================== source(emptyStringApos, syntax=emptyStringSyntax)
-<aaa ''>
+<a ''>
 ========================================== source(emptyStringTripleQuot, syntax=emptyStringSyntax)
-<aaa """""">
+<a """""">
 ========================================== source(emptyStringTripleApos, syntax=emptyStringSyntax)
-<aaa ''''''>
-========================================== syntax(emptyStringSyntax)
+<a ''''''>
+========================================== syntax(emptyStringSyntax, wrapper=valueWrapper)
 {
-    "type": "L20n",
-    "entries": [
-        {
-            "type": "Entity",
-            "id": {
-                "type": "Identifier",
-                "name": "aaa"
-            },
-            "value": {
-                "type": "String",
-                "content": ""
-            },
-            "index": null,
-            "attrs": null,
-            "local": false
-        }
-    ]
+    "type": "String",
+    "content": ""
 }
 ========================================== source(uEscapeSequence, syntax=uEscapeSequenceSyntax)
 <a "\u0061">
@@ -49,6 +34,29 @@
     "type": "String",
     "content": "©"
 }
+========================================== source(surrogatePair, syntax=surrogatePairSyntax)
+<a "\uD834\uDD1E">
+========================================== syntax(surrogatePairSyntax, wrapper=valueWrapper)
+{
+    "type": "String",
+    "content": "\ud834\udd1e"
+}
+========================================== badSource(missingLowSurrogate)
+<a "\ud834"> /* may not be an error in some implementations */
+========================================== badSource(invalidLowSurrogate)
+<a "\ud834\u0000"> /* may not be an error in some implementations */
+========================================== badSource(lowSurrogateNotPrecededByHighSurrogate)
+<a "\udd1e"> /* may not be an error in some implementations */
+========================================== badSource(nonHexCharactersInUEscapeSequenceAreForbidden)
+<a "\u0X00">
+========================================== badSource(tooShortUEscapeSequenceThreeDigits)
+<a "\u012">
+========================================== badSource(tooShortUEscapeSequenceTwoDigits)
+<a "\u01">
+========================================== badSource(tooShortUEscapeSequenceOneDigit)
+<a "\u0">
+========================================== badSource(tooShortUEscapeSequenceZeroDigits)
+<a "\u">
 ========================================== wrapper(valueWrapper)
 {
     "type": "L20n",
@@ -66,13 +74,3 @@
         }
     ]
 }
-========================================== badSource(nonHexCharactersInUEscapeSequenceAreForbidden)
-<a "\u0X00">
-========================================== badSource(tooShortUEscapeSequenceThreeDigits)
-<a "\u012">
-========================================== badSource(tooShortUEscapeSequenceTwoDigits)
-<a "\u01">
-========================================== badSource(tooShortUEscapeSequenceOneDigit)
-<a "\u0">
-========================================== badSource(tooShortUEscapeSequenceZeroDigits)
-<a "\u">

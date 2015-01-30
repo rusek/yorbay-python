@@ -1,6 +1,6 @@
 from collections import namedtuple
 
-Position = namedtuple('Position', ('line', 'column', 'offset'))
+Position = namedtuple('Position', ('line', 'column'))
 
 
 class L20n(object):
