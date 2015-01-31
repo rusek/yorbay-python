@@ -49,12 +49,10 @@ class Tokenizer(object):
     def get_source(self, start, end):
         return self._s[start:end]
 
-    def _linescan(self, scan_start):
-        # Uncomment to verify that no newline is skipped by accident
-        # assert scan_start <= self._pos and '\n' not in self._s[self._line_start:scan_start]
-        pos = self._s.rfind('\n', scan_start, self._pos)
+    def _linescan(self):
+        pos = self._s.rfind('\n', self._line_start, self._pos)
         if pos != -1:
-            self._line += self._s.count('\n', scan_start, pos) + 1
+            self._line += self._s.count('\n', self._line_start, pos) + 1
             self._line_start = pos + 1
 
     def next_token(self):
@@ -68,16 +66,16 @@ class Tokenizer(object):
         self._pos = match.end()
         if match.start(1) != -1:
             type, value = 'ws', None
-            self._linescan(match.start())
+            self._linescan()
         elif match.start(2) != -1:
             comment_end = self._s.find('*/', self._pos)
             if comment_end == -1:
                 self._pos = self._size
-                self._linescan(match.end())
+                self._linescan()
                 raise ParseError('Unclosed comment', pos=self.get_position())
             type, value = 'comment', self._s[self._pos: comment_end]
             self._pos = comment_end + 2  # skip '*/'
-            self._linescan(match.end())
+            self._linescan()
         elif match.start(3) != -1:
             ident = match.group(3)
             if ident[0] == '@':
@@ -91,9 +89,8 @@ class Tokenizer(object):
         elif match.start(5) != -1:
             type, value = 'str_start', match.group(5)
         else:
-            type, value = 'num', int(match.group(6))  # xxxxxxxxxx num followed by _ a-z A-Z
+            type, value = 'num', int(match.group(6))
 
-        # print '<NEXT TOKEN>', type, value
         return Token(type, value)
 
     def next_text_token(self, delim):
@@ -109,21 +106,18 @@ class Tokenizer(object):
         elif self._s[self._pos] == '\\':
             type = 'str'
             value, size = self._parse_escape()
-            scan_start = self._pos
             self._pos += size
-            self._linescan(scan_start)
+            self._linescan()
         else:
             type, value = 'str', self._s[self._pos]
-            scan_start = self._pos
             match = _safe_str_chars_re.match(self._s, self._pos + 1)
             if match:
                 value += match.group()
                 self._pos = match.end()
             else:
                 self._pos += 1
-            self._linescan(scan_start)
+            self._linescan()
 
-        # print '<NEXT TEXT TOKEN>', type, value
         return Token(type, value)
 
     def _parse_escape(self):
@@ -206,7 +200,6 @@ class Parser(object):
         self.ws_before = False
 
     def error(self, msg):
-        # print '<CURRENT TOKEN>', self.token.type, self.token.value  # xxxxxxxxxxxx
         return ParseError(msg, pos=self.pos)
 
     def error_expected(self, desc):
@@ -244,7 +237,6 @@ class Parser(object):
         return syntax.L20n(entries)
 
     def parse_entry(self):
-        # we know that self.offset < self.size
         if self.token.type == '<':
             self.next_token()
             if self.token.type == 'ident' and self.ws_before:
@@ -380,7 +372,7 @@ class Parser(object):
 
     def parse_attribute_expression(self, expression, computed):
         if not isinstance(expression, (syntax.ParenthesisExpression, syntax.Identifier, syntax.ThisExpression)):
-            raise self.error('AttributeExpression must have Identifier, This or Parenthesis as left node')  # xxxxxxxxx
+            raise self.error('The left expression of attribute access must be entity name, this ("~") or parentheses')
         if computed:
             attribute = self.parse_expression()
             self.skip_token(']')
@@ -432,17 +424,20 @@ class Parser(object):
 
     def parse_entity(self, ident, index):
         if not self.ws_before:
-            raise self.error('Expected white space')  # xxxxxxxxxxxxxxxxxxxxxxxxxxxx
+            if index is not None:
+                raise self.error('Expected white space after index')
+            else:
+                raise self.error('Expected white space after entity name')
         value = self.parse_optional_value()
         attrs = None
         if value is None:
             if self.token.type == '>':
-                raise self.error('Expected ">"')  # xxxxxxxxxx maybe attributes expected ?
+                raise self.error('Entity may not be empty')
             attrs = self.parse_attributes()
         else:
             if self.token.type != '>':
                 if not self.ws_before:
-                    raise self.error('Expected white space')  # xxxxxxxxxxxxxxxxx
+                    raise self.error('Expected white space after entity value')
                 attrs = self.parse_attributes()
             else:
                 self.next_token()
@@ -461,7 +456,7 @@ class Parser(object):
     def parse_value(self):
         value = self.parse_optional_value()
         if value is None:
-            raise self.error_expected('value')  # xxxxxxxxxxxxxxxxxx
+            raise self.error_expected('value')
         return value
 
     def parse_hash(self):
@@ -496,15 +491,12 @@ class Parser(object):
             if self.try_skip_token('>'):
                 return attrs
             elif not self.ws_before:
-                raise self.error('Expected whitespace')  # xxxxxxxxxxxxxxxxxxxxxxxx
+                raise self.error('Expected white space after attribute value')
 
     def parse_kvp_with_index(self):
         key = self.parse_identifier()
-        index = []
-        if self.token.type == '[':
-            if not self.ws_before:
-                raise self.error('Expected white space before "["')  # xxxxxxxxxxxxxxxxxxxxxx
-            self.next_token()
+        index = None
+        if self.try_skip_token('[', allow_ws_before=False):
             index = self.parse_item_list(self.parse_expression, ']')
         self.skip_token(':')
         value = self.parse_value()
@@ -516,7 +508,9 @@ class Parser(object):
         if self.ws_before:
             raise self.error('Unexpected white space between "import" and "("')
         self.next_token()
-        uri = self.parse_string()  # xxxxxxxxxxxxxxxxxxx POSSIBLE BUG
+        uri = self.parse_string()
+        if not isinstance(uri, syntax.String):
+            raise self.error('Import URI must not contain placeables')
         self.skip_token(')')
         return syntax.ImportStatement(uri)
 

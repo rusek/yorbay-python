@@ -91,7 +91,7 @@ class Attribute(object):
 
     def to_json(self):
         return dict(type='Attribute', key=self.key.to_json(), value=self.value.to_json(),
-                    index=[arg.to_json() for arg in self.index], local=self.local)
+                    index=self.index and [arg.to_json() for arg in self.index], local=self.local)
 
 
 class HashItem(object):

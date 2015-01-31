@@ -1,0 +1,44 @@
+========================================== source(plural)
+<pl($n) {
+    $n == 1 ? "one" :
+    $n % 10 >= 2 && $n % 10 <= 4 && ($n % 100 < 10 || $n % 100 >= 20) ? "few" :
+    "many"
+}>
+<pl0 "{{ pl(0) }}">
+<pl1 "{{ pl(1) }}">
+<pl2 "{{ pl(2) }}">
+<pl5 "{{ pl(5) }}">
+<pl12 "{{ pl(12) }}">
+<pl22 "{{ pl(22) }}">
+<pl112 "{{ pl(112) }}">
+========================================== check(pluralChecks, syntax=plural)
+{
+    "pl0": "many",
+    "pl1": "one",
+    "pl2": "few",
+    "pl5": "many",
+    "pl12": "many",
+    "pl22": "few",
+    "pl112": "many"
+}
+========================================== source(factorial)
+<factorial($n) { $n == 0 ? 1 : $n * factorial($n - 1) }>
+<factorial0 "{{ factorial(0) }}">
+<factorial1 "{{ factorial(1) }}">
+<factorial2 "{{ factorial(2) }}">
+<factorial5 "{{ factorial(5) }}">
+========================================== check(factorialChecks, syntax=factorial)
+{
+    "factorial0": "1",
+    "factorial1": "1",
+    "factorial2": "2",
+    "factorial5": "120"
+}
+========================================== source(staticScoping)
+<entityUsingN "{{ $n }}">
+<macroUsingN($n) { entityUsingN }>
+<shouldThrowErrorDueToStaticScoping "{{ macroUsingN(12) }}">
+========================================== check(staticScopingChecks, syntax=staticScoping)
+{
+    "shouldThrowErrorDueToStaticScoping": false
+}

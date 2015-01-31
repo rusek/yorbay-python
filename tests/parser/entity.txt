@@ -20,9 +20,133 @@
         }
     ]
 }
+========================================== source(localEntity, syntax=localEntitySyntax)
+<_aaa "">
+========================================== syntax(localEntitySyntax)
+{
+    "type": "L20n",
+    "entries": [
+        {
+            "type": "Entity",
+            "id": {
+                "type": "Identifier",
+                "name": "_aaa"
+            },
+            "value": {
+                "type": "String",
+                "content": ""
+            },
+            "index": null,
+            "attrs": null,
+            "local": true
+        }
+    ]
+}
+========================================== source(entityWithIndex, syntax=entityWithIndexSyntax)
+<aaa[1, 2, 3] "">
+========================================== syntax(entityWithIndexSyntax)
+{
+    "type": "L20n",
+    "entries": [{
+        "type": "Entity",
+        "id": {"type": "Identifier", "name": "aaa"},
+        "value": {"type": "String", "content": ""},
+        "index": [
+            {"type": "Number", "value": 1},
+            {"type": "Number", "value": 2},
+            {"type": "Number", "value": 3}
+        ],
+        "attrs": null,
+        "local": false
+    }]
+}
+========================================== source(entityWithAttributes, syntax=entityWithAttributesSyntax)
+<aaa "" attr:"attrVal" attr2 : "attr2Val" attr3 :"attr3Val">
+========================================== syntax(entityWithAttributesSyntax)
+{
+    "type": "L20n",
+    "entries": [{
+        "type": "Entity",
+        "id": {"type": "Identifier", "name": "aaa"},
+        "value": {"type": "String", "content": ""},
+        "index": null,
+        "attrs": [{
+            "type": "Attribute",
+            "key": {"type": "Identifier", "name": "attr"},
+            "value": {"type": "String", "content": "attrVal"},
+            "index": null,
+            "local": false
+        }, {
+            "type": "Attribute",
+            "key": {"type": "Identifier", "name": "attr2"},
+            "value": {"type": "String", "content": "attr2Val"},
+            "index": null,
+            "local": false
+        }, {
+            "type": "Attribute",
+            "key": {"type": "Identifier", "name": "attr3"},
+            "value": {"type": "String", "content": "attr3Val"},
+            "index": null,
+            "local": false
+        }],
+        "local": false
+    }]
+}
+========================================== source(entityWithLocalAttribute, syntax=entityWithLocalAttributeSyntax)
+<aaa "" _attr:"val">
+========================================== syntax(entityWithLocalAttributeSyntax)
+{
+    "type": "L20n",
+    "entries": [{
+        "type": "Entity",
+        "id": {"type": "Identifier", "name": "aaa"},
+        "value": {"type": "String", "content": ""},
+        "index": null,
+        "attrs": [{
+            "type": "Attribute",
+            "key": {"type": "Identifier", "name": "_attr"},
+            "value": {"type": "String", "content": "val"},
+            "index": null,
+            "local": true
+        }],
+        "local": false
+    }]
+}
+========================================== source(entityWithAttributeWithIndex, syntax=entityWithAttributeWithIndexSyntax)
+<aaa "" attr[1, 2, 3]:"val">
+========================================== syntax(entityWithAttributeWithIndexSyntax)
+{
+    "type": "L20n",
+    "entries": [{
+        "type": "Entity",
+        "id": {"type": "Identifier", "name": "aaa"},
+        "value": {"type": "String", "content": ""},
+        "index": null,
+        "attrs": [{
+            "type": "Attribute",
+            "key": {"type": "Identifier", "name": "attr"},
+            "value": {"type": "String", "content": "val"},
+            "index": [
+                {"type": "Number", "value": 1},
+                {"type": "Number", "value": 2},
+                {"type": "Number", "value": 3}
+            ],
+            "local": false
+        }],
+        "local": false
+    }]
+}
 ========================================== badSource(spaceAfterEntityStart)
 < aaa "">
 ========================================== badSource(spaceBeforeIndexOpenBrackedIsForbidden)
 <aaa [$x] "">
 ========================================== badSource(spaceAfterIndexCloseBrackedIsRequired)
 <aaa[$x]"">
+========================================== badSource(missingSpaceBetweenAttributes)
+<aaa "" a:""b:"">
+========================================== badSource(emptyEntityIsForbidden)
+<aaa>
+========================================== badSource(missingSpaceBeforeEntityValue)
+<aaa"">
+========================================== badSource(spaceBeforeAttributeIndexIsForbidden)
+<aaa "" a [1]: "">

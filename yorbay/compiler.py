@@ -157,7 +157,7 @@ class CompiledExpr(object):
 
     def evaluate_number(self, env):
         val = self.evaluate_resolved(env)
-        if get_type(val) is not STRING:
+        if get_type(val) is not NUMBER:
             raise TypeError('Required number, got {0}'.format(type(val)))
         return val
 
@@ -166,6 +166,8 @@ class CompiledExpr(object):
         value_type = get_type(value)
         if value_type is NUMBER:
             value = str(value)
+            if value.endswith('.0'):
+                value = value[:-2]
         elif value_type is not STRING:
             raise TypeError('Required number or string, got {0}'.format(type(value)))
         buf.append(value)

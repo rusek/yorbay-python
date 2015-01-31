@@ -15,5 +15,7 @@ import('xyz')
 }
 ========================================== badSource(forbiddenSpaceAfterImportIdentifier)
 import ('xyz')
+========================================== badSource(uriMayNotContainPlaceables)
+import('x{{ "y" }}z')
 ========================================== badSource(missingCloseParenthesis)
 import('xyz'
