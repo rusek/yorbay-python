@@ -8,7 +8,7 @@ import traceback
 
 sys.path[0] = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
-from yorbay import loads_syntax, ParseError
+from yorbay.parser import parse_source, ParseError
 from yorbay.compiler import compile_syntax
 
 
@@ -101,7 +101,7 @@ class BadSourceSection(Section):
     def run(self, env):
         try:
             print '{0} * running {1}...'.format(env.step(), self.name)
-            loads_syntax(self._source)
+            parse_source(self._source)
         except ParseError:
             pass
         else:
@@ -117,7 +117,7 @@ class SourceSection(Section):
     def run(self, env):
         try:
             print '{0} * running {1}...'.format(env.step(), self.name)
-            syntax = loads_syntax(self._source)
+            syntax = parse_source(self._source)
             if self._syntax_name is not None:
                 json_syntax = syntax.to_json()
                 expected_syntax = env.run_section(self._syntax_name, type=SyntaxSection)

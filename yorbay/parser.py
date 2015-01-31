@@ -573,5 +573,5 @@ class Parser(object):
                 raise self.error_expected('"," or "' + close_type + '"')
 
 
-def loads(s):
+def parse_source(s):
     return Parser(s).parse_l20n()

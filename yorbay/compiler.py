@@ -21,10 +21,17 @@ class Env(object):
         self.globals = globals
         self.this = this
 
-    def resolve_entity(self, name):
-        entry = self.entries[name]
+    def resolve_entity(self, entity_name):
+        entry = self.entries[entity_name]
         if isinstance(entry, BoundEntity):
             return entry.resolve()
+        else:
+            raise TypeError('Not an entity: {0}'.format(type(entry)))
+
+    def resolve_attribute(self, entity_name, attribute_name):
+        entry = self.entries[entity_name]
+        if isinstance(entry, BoundEntity):
+            return entry.resolve_attribute(attribute_name)
         else:
             raise TypeError('Not an entity: {0}'.format(type(entry)))
 
@@ -76,16 +83,19 @@ class BoundEntity(Resolvable):
         self._entity = entity
         self._env = env.copy(self)
 
-    def invoke(self):
-        return self._entity._content.evaluate(self._env)
+    def resolve(self):
+        return self._entity._content.evaluate_resolved(self._env)
 
-    resolve = resolve_once = invoke
+    resolve_once = resolve
 
     def __getitem__(self, key):
         return self._entity._content.evaluate(self._env)[key]  # xxxx should be consistent with PropertyAccess!
 
     def get_attribute(self, name):
         return self._entity._attrs[name].evaluate(self._env)
+
+    def resolve_attribute(self, name):
+        return self._entity._attrs[name].evaluate_resolved(self._env)
 
 
 class CompiledEntity(object):
