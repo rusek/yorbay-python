@@ -49,3 +49,5 @@ c*/
 }
 ========================================== badSource(unclosedComment)
 /*abc
+========================================== badSource(commentInsideEntity)
+<a "" /* comment */ >

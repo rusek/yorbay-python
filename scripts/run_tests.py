@@ -94,9 +94,9 @@ class Section(object):
 
 
 class BadSourceSection(Section):
-    def __init__(self, name, source):
+    def __init__(self, name, body, trim):
         super(BadSourceSection, self).__init__(name)
-        self._source = source
+        self._source = body.strip() if trim else body
 
     def run(self, env):
         try:
@@ -326,6 +326,7 @@ class HeaderParser(object):
             ),
             'badSource': SectionParser(
                 BadSourceSection,
+                trim=OptionalParam(False, self.parse_bool)
             ),
             'syntax': SectionParser(
                 SyntaxSection,
@@ -377,6 +378,15 @@ class HeaderParser(object):
             param_values = {}
         self.skip(')')
         return sect_parser.factory(name, body, **param_values)
+
+    def parse_bool(self):
+        value = self.skip('ident')
+        if value == 'true':
+            return True
+        elif value == 'false':
+            return False
+        else:
+            raise Exception('Not a boolean value: {0}'.format(value))
 
     def parse_params(self, params):
         values = {}

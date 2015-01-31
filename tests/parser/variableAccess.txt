@@ -1,0 +1,19 @@
+========================================== source(variable, syntax=variableSyntax)
+<a() { $varName }>
+========================================== syntax(variableSyntax, wrapper=exprWrapper)
+{
+    "type": "Variable",
+    "id": {"type": "Identifier", "name": "varName"}
+}
+========================================== badSource(spaceBeforeVariableNameIsForbidden)
+<a() { $ varName }>
+========================================== wrapper(exprWrapper)
+{
+    "type": "L20n",
+    "entries": [{
+        "type": "Macro",
+        "id": {"type": "Identifier", "name": "a"},
+        "args": [],
+        "expression": "<HERE>"
+    }]
+}

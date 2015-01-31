@@ -55,6 +55,8 @@
 }
 ========================================== badSource(identifierInsteadOfVariable)
 <myMacro(arg) { 1 }>
+========================================== badSource(globalInsteadOfVariable)
+<myMacro(@arg) { 1 }>
 ========================================== badSource(trailingCommaInArgumentList)
 <myMacro($arg,) { 1 }>
 ========================================== badSource(spaceBeforeArgumentOpenParenthesis)

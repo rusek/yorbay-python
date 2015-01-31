@@ -11,6 +11,13 @@
     "type": "String",
     "content": ""
 }
+========================================== source(escapedQuotDelim, syntax=escapedQuotDelimSyntax)
+<a "\"">
+========================================== syntax(escapedQuotDelimSyntax, wrapper=valueWrapper)
+{
+    "type": "String",
+    "content": "\""
+}
 ========================================== source(uEscapeSequence, syntax=uEscapeSequenceSyntax)
 <a "\u0061">
 ========================================== syntax(uEscapeSequenceSyntax, wrapper=valueWrapper)
@@ -57,6 +64,10 @@
 <a "\u0">
 ========================================== badSource(tooShortUEscapeSequenceZeroDigits)
 <a "\u">
+========================================== badSource(eofAfterSlash, trim=true)
+<a "\
+========================================== badSource(unclosedString)
+<a "
 ========================================== wrapper(valueWrapper)
 {
     "type": "L20n",

@@ -1,0 +1,19 @@
+========================================== source(global, syntax=globalSyntax)
+<a() { @globalName }>
+========================================== syntax(globalSyntax, wrapper=exprWrapper)
+{
+    "type": "GlobalsExpression",
+    "id": {"type": "Identifier", "name": "globalName"}
+}
+========================================== badSource(spaceBeforeGlobalNameIsForbidden)
+<a() { @ globalName }>
+========================================== wrapper(exprWrapper)
+{
+    "type": "L20n",
+    "entries": [{
+        "type": "Macro",
+        "id": {"type": "Identifier", "name": "a"},
+        "args": [],
+        "expression": "<HERE>"
+    }]
+}

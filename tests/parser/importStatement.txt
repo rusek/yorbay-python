@@ -19,3 +19,7 @@ import ('xyz')
 import('x{{ "y" }}z')
 ========================================== badSource(missingCloseParenthesis)
 import('xyz'
+========================================== badSource(missingOpenParenthesis)
+import'xyz'
+========================================== badSource(uriMayNotBeANumber)
+import(1)

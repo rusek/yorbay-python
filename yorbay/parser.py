@@ -168,10 +168,7 @@ def describe_token(token):
 
 
 def describe_token_type(type):
-    if type == 'ident':
-        return 'identifier'
-    else:
-        return'"{0}"'.format(type)
+    return '"{0}"'.format(type)
 
 
 class Parser(object):
@@ -203,7 +200,6 @@ class Parser(object):
         return ParseError(msg, pos=self.pos)
 
     def error_expected(self, desc):
-        # str_start
         if self.token.type == 'comment':
             return self.error('Comments can be used only as top-level entries')
         elif self.token.type == 'eof':
@@ -550,7 +546,7 @@ class Parser(object):
             elif self.token.type == 'eof':
                 raise self.error('Unclosed string')
             else:
-                raise Exception('Invalid token type: %s' % self.token.type)
+                raise RuntimeError('Invalid text token type: %s' % self.token.type)
 
     def parse_item_list(self, callback, close_type):
         if self.try_skip_token(close_type):

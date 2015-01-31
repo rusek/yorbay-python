@@ -1,0 +1,16 @@
+========================================== source(this, syntax=thisSyntax)
+<a() { ~ }>
+========================================== syntax(thisSyntax, wrapper=exprWrapper)
+{
+    "type": "ThisExpression"
+}
+========================================== wrapper(exprWrapper)
+{
+    "type": "L20n",
+    "entries": [{
+        "type": "Macro",
+        "id": {"type": "Identifier", "name": "a"},
+        "args": [],
+        "expression": "<HERE>"
+    }]
+}

@@ -1,0 +1,75 @@
+========================================== source(hash, syntax=hashSyntax)
+<a {
+    key1: "val1",
+    key2: "val2"
+}>
+========================================== syntax(hashSyntax, wrapper=valueWrapper)
+{
+    "type": "Hash",
+    "content": [{
+        "type": "HashItem",
+        "key": {"type": "Identifier", "name": "key1"},
+        "value": {"type": "String", "content": "val1"},
+        "default": false
+    }, {
+        "type": "HashItem",
+        "key": {"type": "Identifier", "name": "key2"},
+        "value": {"type": "String", "content": "val2"},
+        "default": false
+    }]
+}
+========================================== source(hashWithDefault, syntax=hashWithDefaultSyntax)
+<a {
+    key1: "val1",
+    *key2: "val2",
+    key3: "val3"
+}>
+========================================== syntax(hashWithDefaultSyntax, wrapper=valueWrapper)
+{
+    "type": "Hash",
+    "content": [{
+        "type": "HashItem",
+        "key": {"type": "Identifier", "name": "key1"},
+        "value": {"type": "String", "content": "val1"},
+        "default": false
+    }, {
+        "type": "HashItem",
+        "key": {"type": "Identifier", "name": "key2"},
+        "value": {"type": "String", "content": "val2"},
+        "default": true
+    }, {
+        "type": "HashItem",
+        "key": {"type": "Identifier", "name": "key3"},
+        "value": {"type": "String", "content": "val3"},
+        "default": false
+    }]
+}
+========================================== badSource(hashMayNotBeEmpty)
+<a {
+}>
+========================================== badSource(multipleDefaultItemsAreForbidden)
+<a {
+    *key1: "val1",
+    *key2: "val2"
+}>
+========================================== badSource(hashValueMayNotBeNumber)
+<a {key: 1}>
+========================================== badSource(hashValueMayNotBeVariable)
+<a {key: $var}>
+========================================== wrapper(valueWrapper)
+{
+    "type": "L20n",
+    "entries": [
+        {
+            "type": "Entity",
+            "id": {
+                "type": "Identifier",
+                "name": "a"
+            },
+            "value": "<HERE>",
+            "index": null,
+            "attrs": null,
+            "local": false
+        }
+    ]
+}

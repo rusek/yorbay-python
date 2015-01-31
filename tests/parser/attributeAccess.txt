@@ -7,6 +7,27 @@
     "attribute": {"type": "Identifier", "name": "attrName"},
     "computed": false
 }
+========================================== source(staticAttributeOfThis, syntax=staticAttributeOfThisSyntax)
+<a(){ ~::attrName }>
+========================================== syntax(staticAttributeOfThisSyntax, wrapper=exprWrapper)
+{
+    "type": "AttributeExpression",
+    "expression": {"type": "ThisExpression"},
+    "attribute": {"type": "Identifier", "name": "attrName"},
+    "computed": false
+}
+========================================== source(staticAttributeOfParentheses, syntax=staticAttributeOfParenthesesSyntax)
+<a(){ (1)::attrName }>
+========================================== syntax(staticAttributeOfParenthesesSyntax, wrapper=exprWrapper)
+{
+    "type": "AttributeExpression",
+    "expression": {
+        "type": "ParenthesisExpression",
+        "expression": {"type": "Number", "value": 1}
+    },
+    "attribute": {"type": "Identifier", "name": "attrName"},
+    "computed": false
+}
 ========================================== source(computedAttribute, syntax=computedAttributeSyntax)
 <a(){ objName::[nonAttrName] }>
 ========================================== syntax(computedAttributeSyntax, wrapper=exprWrapper)
@@ -17,15 +38,19 @@
     "computed": true
 }
 ========================================== badSource(spaceAfterDoubleColonIsForbidden)
-<a(){ objName:: propName }>
+<a(){ objName:: attrName }>
 ========================================== badSource(spaceBeforeDoubleColonIsForbidden)
-<a(){ objName ::propName }>
+<a(){ objName ::attrName }>
 ========================================== badSource(spaceBeforeAttributeAccessOpenBracketIsForbidden)
-<a(){ objName ::[nonPropName] }>
+<a(){ objName ::[nonAttrName] }>
 ========================================== badSource(spaceBetweenColonsIsForbidden)
-<a(){ objName: :[nonPropName] }>
+<a(){ objName: :[nonAttrName] }>
 ========================================== badSource(spaceAfterColonsIsForbidden)
-<a(){ objName:: [nonPropName] }>
+<a(){ objName:: [nonAttrName] }>
+========================================== badSource(leftExpressionMayNotBeNumber)
+<a(){ 1::attrName }>
+========================================== badSource(leftExpressionMayNotBeVariable)
+<a(){ $varName::attrName }>
 ========================================== wrapper(exprWrapper)
 {
     "type": "L20n",

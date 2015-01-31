@@ -1,3 +1,5 @@
+from __future__ import division
+
 BOOL = object()
 NUMBER = object()
 STRING = object()

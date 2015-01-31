@@ -1,0 +1,10 @@
+========================================== source(empty, syntax=emptySyntax)
+========================================== syntax(emptySyntax)
+{
+    "type": "L20n",
+    "entries": []
+}
+========================================== badSource(nakedExpressionIsForbidden)
+2 + 2
+========================================== badSource(unrecognizedCharacter)
+^

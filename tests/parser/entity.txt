@@ -60,6 +60,10 @@
         "local": false
     }]
 }
+========================================== badSource(trailingCommaInEntityIndexIsForbidden)
+<aaa[1, 2, 3,] "">
+========================================== badSource(entityIndexItemsMayNotBeSpaceSeparated)
+<aaa[1 2 3] "">
 ========================================== source(entityWithAttributes, syntax=entityWithAttributesSyntax)
 <aaa "" attr:"attrVal" attr2 : "attr2Val" attr3 :"attr3Val">
 ========================================== syntax(entityWithAttributesSyntax)
@@ -86,6 +90,26 @@
             "type": "Attribute",
             "key": {"type": "Identifier", "name": "attr3"},
             "value": {"type": "String", "content": "attr3Val"},
+            "index": null,
+            "local": false
+        }],
+        "local": false
+    }]
+}
+========================================== source(entityWithAttributesOnly, syntax=entityWithAttributesOnlySyntax)
+<aaa attr:"attrVal">
+========================================== syntax(entityWithAttributesOnlySyntax)
+{
+    "type": "L20n",
+    "entries": [{
+        "type": "Entity",
+        "id": {"type": "Identifier", "name": "aaa"},
+        "value": null,
+        "index": null,
+        "attrs": [{
+            "type": "Attribute",
+            "key": {"type": "Identifier", "name": "attr"},
+            "value": {"type": "String", "content": "attrVal"},
             "index": null,
             "local": false
         }],
@@ -144,8 +168,12 @@
 <aaa[$x]"">
 ========================================== badSource(missingSpaceBetweenAttributes)
 <aaa "" a:""b:"">
+========================================== badSource(missingSpaceBeforeAttributes)
+<aaa ""a:"" b:"">
 ========================================== badSource(emptyEntityIsForbidden)
 <aaa>
+========================================== badSource(emptyEntityWithSpacingIsForbidden)
+<aaa >
 ========================================== badSource(missingSpaceBeforeEntityValue)
 <aaa"">
 ========================================== badSource(spaceBeforeAttributeIndexIsForbidden)
