@@ -8,6 +8,12 @@ STRING = object()
 OBJECT = object()
 
 
+class TailType(object):
+    pass
+
+Tail = TailType()
+
+
 def get_type(val):
     if isinstance(val, bool):
         return BOOL
@@ -128,6 +134,22 @@ class CompiledMacro(object):
 
     def bind(self, lenv):
         return BoundMacro(self, lenv)
+
+
+class BoundTailMacro(BoundMacro):
+    def invoke(self, args):
+        if len(args) != len(self._macro._arg_names):
+            raise TypeError('Required {0} argument(s), got {1}'.format(len(self._macro._arg_names), len(args)))
+        env = self._lenv.make_expr_env(args)
+        val = Tail
+        while val is Tail:
+            val = self._macro._expr.evaluate(env)
+        return val
+
+
+class CompiledTailMacro(CompiledMacro):
+    def bind(self, lenv):
+        return BoundTailMacro(self, lenv)
 
 
 class CompiledExpr(object):
@@ -428,6 +450,15 @@ class CompiledCall(CompiledExpr):
         return callee_val.invoke(args)
 
 
+class CompiledTailCall(CompiledExpr):
+    def __init__(self, args):
+        self._args = args
+
+    def evaluate(self, env):
+        env.locals = [arg.evaluate(env) for arg in self._args]
+        return Tail
+
+
 class CompiledPropertyAccess(CompiledExpr):
     def __init__(self, expr, prop):
         self._expr = expr
@@ -561,10 +592,14 @@ def compile_macro(cstate, macro):
     arg_names = [arg.id.name for arg in macro.args]
     cstate.enter_macro(macro.id.name, arg_names)
 
-    expr = compile_expression(cstate, macro.expression)
+    has_tail, expr = compile_tail_expression(cstate, macro.expression)
+    if has_tail:
+        compiled_macro = CompiledTailMacro(macro.id.name, arg_names, expr)
+    else:
+        compiled_macro = CompiledMacro(macro.id.name, arg_names, expr)
 
     cstate.exit_entry()
-    return macro.id.name, CompiledMacro(macro.id.name, arg_names, expr)
+    return macro.id.name, compiled_macro
 
 
 entry_dispatch = {
@@ -656,6 +691,30 @@ value_dispatch = {
         [compile_expression(cstate, item) for item in node.content], node.source),
     'Hash': compile_hash,
 }
+
+
+def is_this_access(cstate, node):
+    node_type = node.__class__.__name__
+    if node_type == 'ThisExpression':
+        return True
+    elif node_type == 'Identifier':
+        return cstate.entry_name == node.name
+    else:
+        return False
+
+
+def compile_tail_expression(cstate, node):
+    node_type = node.__class__.__name__
+    if node_type == 'ConditionalExpression':
+        test = compile_expression(cstate, node.test)
+        consequent_has_tail, consequent = compile_tail_expression(cstate, node.consequent)
+        alternate_has_tail, alternate = compile_tail_expression(cstate, node.alternate)
+        return consequent_has_tail or alternate_has_tail, CompiledConditional(test, consequent, alternate)
+    elif node_type == 'CallExpression':
+        if is_this_access(cstate, node.callee) and len(node.arguments) == len(cstate.local_names):
+            return True, CompiledTailCall([compile_expression(cstate, arg) for arg in node.arguments])
+
+    return False, compile_expression(cstate, node)
 
 
 def compile_expression(cstate, node):
