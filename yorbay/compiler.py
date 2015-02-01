@@ -75,20 +75,6 @@ class CompiledL20n(object):
         return env
 
 
-class Dispatcher(object):
-    def __init__(self):
-        self._dispatch_table = {}
-
-    def register(self, type):
-        def decor(func):
-            self._dispatch_table[type] = func
-            return func
-        return decor
-
-    def __call__(self, node, *args, **kwargs):
-        return self._dispatch_table[node.__class__.__name__](node, *args, **kwargs)
-
-
 class Resolvable(object):
     def resolve_once(self):
         raise NotImplementedError
@@ -97,7 +83,7 @@ class Resolvable(object):
 class BoundEntity(Resolvable):
     def __init__(self, entity, lenv):
         self._entity = entity
-        self._env = lenv.make_expr_env(self, {})
+        self._env = lenv.make_expr_env(self, ())
 
     def resolve(self):
         return self._entity._content.evaluate_resolved(self._env)
@@ -132,7 +118,7 @@ class BoundMacro(object):
     def invoke(self, args):
         if len(args) != len(self._macro._arg_names):
             raise TypeError('Required {0} argument(s), got {1}'.format(len(self._macro._arg_names), len(args)))
-        return self._macro._expr.evaluate(self._lenv.make_expr_env(self, dict(zip(self._macro._arg_names, args))))
+        return self._macro._expr.evaluate(self._lenv.make_expr_env(self, args))
 
 
 class CompiledMacro(object):
@@ -355,12 +341,17 @@ class CompiledEntryAccess(CompiledNamed):
 class CompiledVariableAccess(CompiledNamed):
     def evaluate(self, env):
         try:
-            try:
-                return env.locals[self._name]
-            except KeyError:
-                return env.parent.vars[self._name]
+            return env.parent.vars[self._name]
         except KeyError:
             raise NameError('Variable "{0}" is not defined'.format(self._name))
+
+
+class CompiledLocalAccess(CompiledExpr):
+    def __init__(self, index):
+        self._index = index
+
+    def evaluate(self, env):
+        return env.locals[self._index]
 
 
 class CompiledGlobalAccess(CompiledNamed):
@@ -512,35 +503,59 @@ class CompiledThis(CompiledExpr):
         return env.this
 
 
+class CompilerState(object):
+    def __init__(self):
+        self.entry_name = None
+        self.local_names = None
+
+    def enter_macro(self, macro_name, local_names):
+        assert self.entry_name is None
+        self.entry_name = macro_name
+        self.local_names = local_names
+
+    def enter_entity(self, entity_name):
+        assert self.entry_name is None
+        self.entry_name = entity_name
+        self.local_names = ()
+
+    def exit_entry(self):
+        self.entry_name = None
+        self.local_names = None
+
+
 def compile_syntax(l20n):
+    cstate = CompilerState()
     entries = {}
     for entry in l20n.entries:
-        compiled_entry = compile_entry(entry)
+        compiled_entry = compile_entry(cstate, entry)
         if compiled_entry is not None:
             k, v = compiled_entry
             entries[k] = v
     return CompiledL20n(entries)
 
 
-compile_entry = Dispatcher()
-compile_entry.register(type='Comment')(lambda node: None)
+def compile_entity(cstate, entity):
+    cstate.enter_entity(entity.id.name)
 
-
-@compile_entry.register(type='Entity')
-def compile_entity(entity):
     attrs = {}
     for attr in entity.attrs or ():
-        index = () if entity.index is None else [compile_expression(index_item) for index_item in entity.index]
-        attrs[attr.key.name] = compile_value(attr.value, index)
+        if attr.index is None:
+            index = ()
+        else:
+            index = [compile_expression(cstate, index_item) for index_item in attr.index]
+        attrs[attr.key.name] = compile_value(cstate, attr.value, index)
 
     if entity.value is not None:
-        content = compile_value(
-            entity.value,
-            () if entity.index is None else [compile_expression(index_item) for index_item in entity.index]
-        )
+        if entity.index is None:
+            index = ()
+        else:
+            index = [compile_expression(cstate, index_item) for index_item in entity.index]
+
+        content = compile_value(cstate, entity.value, index)
     else:
         content = CompiledNull()
 
+    cstate.exit_entry()
     return entity.id.name, CompiledEntity(
         entity.id.name,
         content,
@@ -548,13 +563,28 @@ def compile_entity(entity):
     )
 
 
-@compile_entry.register(type='Macro')
-def compile_macro(macro):
+def compile_macro(cstate, macro):
     arg_names = [arg.id.name for arg in macro.args]
-    return macro.id.name, CompiledMacro(macro.id.name, arg_names, compile_expression(macro.expression))
+    cstate.enter_macro(macro.id.name, arg_names)
+
+    expr = compile_expression(cstate, macro.expression)
+
+    cstate.exit_entry()
+    return macro.id.name, CompiledMacro(macro.id.name, arg_names, expr)
 
 
-def compile_hash(node, index):
+entry_dispatch = {
+    'Comment': lambda cstate, node: None,
+    'Entity': compile_entity,
+    'Macro': compile_macro,
+}
+
+
+def compile_entry(cstate, node):
+    return entry_dispatch[node.__class__.__name__](cstate, node)
+
+
+def compile_hash(cstate, node, index):
     if index:
         index_item, index_tail = index[0], index[1:]
     else:
@@ -562,69 +592,88 @@ def compile_hash(node, index):
     default = None
     items = {}
     for item_node in node.content:
-        value = compile_value(item_node.value, index_tail)
+        value = compile_value(cstate, item_node.value, index_tail)
         if item_node.default:
             default = value
         items[item_node.key.name] = value
     return CompiledHash(items, index_item, default)
 
 
-def compile_property_expression(node):
-    expr = compile_expression(node.expression)
+def compile_property_expression(cstate, node):
+    expr = compile_expression(cstate, node.expression)
     if node.computed:
-        prop = compile_expression(node.property)
+        prop = compile_expression(cstate, node.property)
     else:
         prop = CompiledString(node.property.name)
     return CompiledPropertyAccess(expr, prop)
 
 
-def compile_attribute_expression(node):
-    expr = compile_expression(node.expression)
+def compile_attribute_expression(cstate, node):
+    expr = compile_expression(cstate, node.expression)
     if node.computed:
-        attr = compile_expression(node.attribute)
+        attr = compile_expression(cstate, node.attribute)
     else:
         attr = CompiledString(node.attribute.name)
     return CompiledAttributeAccess(expr, attr)
 
 
-expressions = {
-    'Number': lambda node: CompiledNumber(node.value),
-    'Identifier': lambda node: CompiledEntryAccess(node.name),
-    'Variable': lambda node: CompiledVariableAccess(node.id.name),
-    'GlobalsExpression': lambda node: CompiledGlobalAccess(node.id.name),
-    'ConditionalExpression': lambda node: CompiledConditional(
-        compile_expression(node.test), compile_expression(node.consequent), compile_expression(node.alternate)),
-    'BinaryExpression': lambda node: binary_operators[node.operator.token](
-        compile_expression(node.left), compile_expression(node.right)),
-    'LogicalExpression': lambda node: logical_operators[node.operator.token](
-        compile_expression(node.left), compile_expression(node.right)),
-    'UnaryExpression': lambda node: unary_operators[node.operator.token](compile_expression(node.argument)),
-    'ParenthesisExpression': lambda node: compile_expression(node.expression),
-    'CallExpression': lambda node: CompiledCall(
-        compile_expression(node.callee), [compile_expression(arg) for arg in node.arguments]),
+def compile_variable(cstate, node):
+    var_name = node.id.name
+    try:
+        return CompiledLocalAccess(cstate.local_names.index(var_name))
+    except ValueError:
+        return CompiledVariableAccess(var_name)
+
+
+expression_dispatch = {
+    'Number': lambda cstate, node: CompiledNumber(node.value),
+    'Identifier': lambda cstate, node: CompiledEntryAccess(node.name),
+    'Variable': compile_variable,
+    'GlobalsExpression': lambda cstate, node: CompiledGlobalAccess(node.id.name),
+    'ConditionalExpression': lambda cstate, node: CompiledConditional(
+        compile_expression(cstate, node.test),
+        compile_expression(cstate, node.consequent),
+        compile_expression(cstate, node.alternate)
+    ),
+    'BinaryExpression': lambda cstate, node: binary_operators[node.operator.token](
+        compile_expression(cstate, node.left),
+        compile_expression(cstate, node.right)
+    ),
+    'LogicalExpression': lambda cstate, node: logical_operators[node.operator.token](
+        compile_expression(cstate, node.left),
+        compile_expression(cstate, node.right)
+    ),
+    'UnaryExpression': lambda cstate, node: unary_operators[node.operator.token](
+        compile_expression(cstate, node.argument)
+    ),
+    'ParenthesisExpression': lambda cstate, node: compile_expression(cstate, node.expression),
+    'CallExpression': lambda cstate, node: CompiledCall(
+        compile_expression(cstate, node.callee),
+        [compile_expression(cstate, arg) for arg in node.arguments]
+    ),
     'PropertyExpression': compile_property_expression,
     'AttributeExpression': compile_attribute_expression,
-    'ThisExpression': lambda node: CompiledThis(),
+    'ThisExpression': lambda cstate, node: CompiledThis(),
 }
 
-values = {
-    'String': lambda node, index: CompiledString(node.content),
-    'ComplexString': lambda node, index: CompiledComplexString(
-        [compile_expression(item) for item in node.content], node.source),
+value_dispatch = {
+    'String': lambda cstate, node, index: CompiledString(node.content),
+    'ComplexString': lambda cstate, node, index: CompiledComplexString(
+        [compile_expression(cstate, item) for item in node.content], node.source),
     'Hash': compile_hash,
 }
 
 
-def compile_expression(node):
+def compile_expression(cstate, node):
     name = node.__class__.__name__
-    if name in expressions:
-        return expressions[name](node)
+    if name in expression_dispatch:
+        return expression_dispatch[name](cstate, node)
     else:
-        return values[name](node, ())
+        return value_dispatch[name](cstate, node, ())
 
 
-def compile_value(node, index):
-    return values[node.__class__.__name__](node, index)
+def compile_value(cstate, node, index):
+    return value_dispatch[node.__class__.__name__](cstate, node, index)
 
 
 binary_operators = {
