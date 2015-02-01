@@ -1,5 +1,5 @@
 from .parser import parse_source
-from .compiler import compile_syntax
+from .compiler import compile_syntax, ErrorWithSource
 
 
 class Context(object):
@@ -49,6 +49,16 @@ class Context(object):
         env = self._l20n.make_env(vars)
         pos = query.find('::')
         if pos == -1:
-            return env.resolve_entity(query)
+            try:
+                return env.resolve_entity(query)
+            except ErrorWithSource as e:
+                return e.source
+            except:
+                return query
         else:
-            return env.resolve_attribute(query[:pos], query[pos + 2:])
+            try:
+                return env.resolve_attribute(query[:pos], query[pos + 2:])
+            except ErrorWithSource as e:
+                return e.source
+            except:
+                return query

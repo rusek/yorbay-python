@@ -3,13 +3,14 @@
 import copy
 import json
 import os
+import re
 import sys
 import traceback
 
 sys.path[0] = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 from yorbay.parser import parse_source, ParseError
-from yorbay.compiler import compile_syntax
+from yorbay.compiler import compile_syntax, ErrorWithSource
 
 
 def tokenize_header(header):
@@ -191,11 +192,12 @@ def format_json_diff(expected, actual):
 
 
 class CheckSection(Section):
-    def __init__(self, name, body, syntax, context):
+    def __init__(self, name, body, syntax, context, gracefulErrors):
         super(CheckSection, self).__init__(name)
         self._body = json.loads(body)
         self._syntax_name = syntax
         self._context_name = context
+        self._graceful_errors = gracefulErrors
 
     def run(self, env):
         # Should accept either SyntaxSection or SourceSection, but currently SyntaxSection returns JSON and there's
@@ -211,7 +213,16 @@ class CheckSection(Section):
         for entry_name, expectation in self._body.iteritems():
             print '{0}    * checking {1}...'.format(env.step(), entry_name)
             try:
-                result = compiled_l20n.make_env(context.vars).resolve_entity(entry_name)
+                try:
+                    result = compiled_l20n.make_env(context.vars).resolve_entity(entry_name)
+                except Exception as e:
+                    if self._graceful_errors:
+                        if isinstance(e, ErrorWithSource):
+                            result = e.source
+                        else:
+                            result = entry_name
+                    else:
+                        raise
             except:
                 if expectation is not False:
                     traceback.print_exc()
@@ -360,7 +371,8 @@ class HeaderParser(object):
             'check': SectionParser(
                 CheckSection,
                 syntax=RequiredParam(self.skip, 'ident'),
-                context=OptionalParam(None, self.skip, 'ident')
+                context=OptionalParam(None, self.skip, 'ident'),
+                gracefulErrors=OptionalParam(False, self.parse_bool),
             ),
             'wrapper': SectionParser(
                 WrapperSection,

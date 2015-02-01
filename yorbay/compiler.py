@@ -1,5 +1,7 @@
 from __future__ import division
 
+import sys
+
 BOOL = object()
 NUMBER = object()
 STRING = object()
@@ -14,6 +16,15 @@ def get_type(val):
     if isinstance(val, (int, long, float)):
         return NUMBER
     return OBJECT
+
+
+class ErrorWithSource(Exception):
+    def __init__(self, cause, source):
+        self.cause = cause
+        self.source = source
+
+    def __str__(self):
+        return str(self.cause)
 
 
 class Env(object):
@@ -330,34 +341,54 @@ class CompiledNamed(CompiledExpr):
         self._name = name
 
 
-class CompiledIdentifier(CompiledNamed):
+class CompiledEntryAccess(CompiledNamed):
     def evaluate(self, env):
-        return env.entries[self._name]  # KeyError
+        try:
+            return env.entries[self._name]
+        except KeyError:
+            raise NameError('Entry "{0}" is not defined'.format(self._name))
 
 
-class CompiledVariable(CompiledNamed):
+class CompiledVariableAccess(CompiledNamed):
     def evaluate(self, env):
-        return env.vars[self._name]  # KeyError
+        try:
+            return env.vars[self._name]
+        except KeyError:
+            raise NameError('Variable "{0}" is not defined'.format(self._name))
 
 
-class CompiledGlobals(CompiledNamed):
+class CompiledGlobalAccess(CompiledNamed):
     def evaluate(self, env):
-        return env.globals[self._name]  # KeyError
+        try:
+            return env.globals[self._name]
+        except KeyError:
+            raise NameError('Global "{0}" is not defined'.format(self._name))
 
 
 class CompiledComplexString(CompiledExpr):
-    def __init__(self, content):
+    def __init__(self, content, source):
         self._content = content
+        self._source = source
 
     def evaluate(self, env):
         buf = []
-        for item in self._content:
-            item.evaluate_placeable(env, buf)
+
+        try:
+            for item in self._content:
+                item.evaluate_placeable(env, buf)
+        except ErrorWithSource as e:
+            raise ErrorWithSource(e.cause, self._source), None, sys.exc_info()[2]
+        except Exception as e:
+            raise ErrorWithSource(e, self._source), None, sys.exc_info()[2]
+
         return ''.join(buf)
 
     evaluate_string = evaluate
 
     def evaluate_placeable(self, env, buf):
+        # No need to annotate exceptions with source here - this function is called
+        # only from other CompiledComplexString, which will override source annotation
+        # anyway
         for item in self._content:
             item.evaluate_placeable(env, buf)
 
@@ -438,12 +469,15 @@ class LazyHash(Resolvable):
         try:
             value = self._items[key]
         except KeyError:
-            return self.get_default()
+            return self.resolve_once()
         return value.evaluate(self._env)
 
-    def get_default(self):
+    def resolve_once(self):
         if self._index_item is not None:
-            key = self._index_item.evaluate_string(self._env)
+            try:
+                key = self._index_item.evaluate_string(self._env)
+            except ErrorWithSource as e:
+                raise e.cause, None, sys.exc_info()[2]
             try:
                 value = self._items[key]
             except KeyError:
@@ -455,8 +489,6 @@ class LazyHash(Resolvable):
             return self._default.evaluate(self._env)
 
         raise KeyError('Hash key lookup failed')
-
-    resolve_once = get_default
 
 
 class CompiledHash(CompiledExpr):
@@ -551,9 +583,9 @@ def compile_attribute_expression(node):
 
 expressions = {
     'Number': lambda node: CompiledNumber(node.value),
-    'Identifier': lambda node: CompiledIdentifier(node.name),
-    'Variable': lambda node: CompiledVariable(node.id.name),
-    'GlobalsExpression': lambda node: CompiledGlobals(node.id.name),
+    'Identifier': lambda node: CompiledEntryAccess(node.name),
+    'Variable': lambda node: CompiledVariableAccess(node.id.name),
+    'GlobalsExpression': lambda node: CompiledGlobalAccess(node.id.name),
     'ConditionalExpression': lambda node: CompiledConditional(
         compile_expression(node.test), compile_expression(node.consequent), compile_expression(node.alternate)),
     'BinaryExpression': lambda node: binary_operators[node.operator.token](
@@ -571,7 +603,8 @@ expressions = {
 
 values = {
     'String': lambda node, index: CompiledString(node.content),
-    'ComplexString': lambda node, index: CompiledComplexString([compile_expression(item) for item in node.content]),
+    'ComplexString': lambda node, index: CompiledComplexString(
+        [compile_expression(item) for item in node.content], node.source),
     'Hash': compile_hash,
 }
 

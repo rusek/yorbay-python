@@ -1,0 +1,33 @@
+========================================== source(graceful)
+
+<shouldPrintComplexStringSourceWithoutStringDelimiters """before {{ $noSuchVar }} after""">
+
+<shouldPrintDefaultComplexStringSourceFromHash {
+    somekey: "somevalue",
+    *defaultkey: "{{ $noSuchVar }}",
+    otherkey: "othervalue"
+}>
+
+<shouldPrintComplexStringSourceOnCorrectIndex["key"] {
+    key: "{{ $noSuchVar }}",
+    otherkey: "othervalue"
+}>
+
+
+<shouldPrintEntityNameOnErrorInIndex["{{ $noSuchVar }}"] {
+    *key: "value"
+}>
+
+<shouldPrintOutermostComplextStringSourceOnErrorInNestedComplexString
+    "a{{ 'b{{ $noSuchVar }}c' }}d"
+>
+
+========================================== check(gracefulChecks, syntax=graceful, gracefulErrors=true)
+{
+    "shouldPrintTheNameOfMissingEntity": "shouldPrintTheNameOfMissingEntity",
+    "shouldPrintComplexStringSourceWithoutStringDelimiters": "before {{ $noSuchVar }} after",
+    "shouldPrintDefaultComplexStringSourceFromHash": "{{ $noSuchVar }}",
+    "shouldPrintComplexStringSourceOnCorrectIndex": "{{ $noSuchVar }}",
+    "shouldPrintEntityNameOnErrorInIndex": "shouldPrintEntityNameOnErrorInIndex",
+    "shouldPrintOutermostComplextStringSourceOnErrorInNestedComplexString": "a{{ 'b{{ $noSuchVar }}c' }}d"
+}

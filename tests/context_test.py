@@ -32,11 +32,23 @@ class TestContext(unittest.TestCase):
                 *other: "other"
             }>
 
+            <typesIndexed[$type] {
+                str: "string",
+                num: "number",
+                bool: "boolean",
+                *other: "other"
+            }>
+
             <type "{{ types[$type] }}">
 
             <withAttribs
                 'Me have attributes!'
                 color:'red'
+            >
+
+            <withBadAttribs
+                error:'{{ $noSuchVar }}'
+                indexError[$noSuchVar]:{k1: "v1", k2: "v2"}
             >
 
             <luckyNum "Your lucky number is {{ $num }}">
@@ -47,8 +59,16 @@ class TestContext(unittest.TestCase):
         self.assertEqual(self.context('types'), 'other')
         self.assertEqual(self.context('type', type='num'), 'number')
 
+    def test_graceful_errors_in_entity_query(self):
+        self.assertEqual(self.context('type'), '{{ types[$type] }}')
+        self.assertEqual(self.context('typesIndexed'), 'typesIndexed')
+
     def test_attribute_query(self):
         self.assertEqual(self.context('withAttribs::color'), 'red')
+
+    def test_graceful_errors_in_attribute_query(self):
+        self.assertEqual(self.context('withBadAttribs::error'), '{{ $noSuchVar }}')
+        self.assertEqual(self.context('withBadAttribs::indexError'), 'withBadAttribs::indexError')
 
     def test_variable_overrides(self):
         self.context['num'] = 42
