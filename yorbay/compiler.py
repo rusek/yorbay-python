@@ -48,16 +48,15 @@ class L20nEnv(object):
         else:
             raise TypeError('Not an entity: {0}'.format(type(entry)))
 
-    def make_expr_env(self, this, locals):
-        return ExprEnv(self, this, locals)
+    def make_expr_env(self, locals):
+        return ExprEnv(self, locals)
 
 
 class ExprEnv(object):
-    __slots__ = ('parent', 'this', 'locals')
+    __slots__ = ('parent', 'locals')
 
-    def __init__(self, parent, this, locals):
+    def __init__(self, parent, locals):
         self.parent = parent
-        self.this = this
         self.locals = locals
 
 
@@ -83,7 +82,7 @@ class Resolvable(object):
 class BoundEntity(Resolvable):
     def __init__(self, entity, lenv):
         self._entity = entity
-        self._env = lenv.make_expr_env(self, ())
+        self._env = lenv.make_expr_env(())
 
     def resolve(self):
         return self._entity._content.evaluate_resolved(self._env)
@@ -118,7 +117,7 @@ class BoundMacro(object):
     def invoke(self, args):
         if len(args) != len(self._macro._arg_names):
             raise TypeError('Required {0} argument(s), got {1}'.format(len(self._macro._arg_names), len(args)))
-        return self._macro._expr.evaluate(self._lenv.make_expr_env(self, args))
+        return self._macro._expr.evaluate(self._lenv.make_expr_env(args))
 
 
 class CompiledMacro(object):
@@ -457,7 +456,7 @@ class CompiledAttributeAccess(CompiledExpr):
 
 class LazyHash(Resolvable):
     def __init__(self, env, items, index_item, default):
-        self._env = ExprEnv(env.parent, env.this, env.locals)
+        self._env = ExprEnv(env.parent, env.locals)
         self._items = items
         self._index_item = index_item
         self._default = default
@@ -496,11 +495,6 @@ class CompiledHash(CompiledExpr):
 
     def evaluate(self, env):
         return LazyHash(env, self._items, self._index_item, self._default)
-
-
-class CompiledThis(CompiledExpr):
-    def evaluate(self, env):
-        return env.this
 
 
 class CompilerState(object):
@@ -653,7 +647,7 @@ expression_dispatch = {
     ),
     'PropertyExpression': compile_property_expression,
     'AttributeExpression': compile_attribute_expression,
-    'ThisExpression': lambda cstate, node: CompiledThis(),
+    'ThisExpression': lambda cstate, node: CompiledEntryAccess(cstate.entry_name),
 }
 
 value_dispatch = {
