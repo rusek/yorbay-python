@@ -27,7 +27,7 @@ class ErrorWithSource(Exception):
         return str(self.cause)
 
 
-class Env(object):
+class L20nEnv(object):
     def __init__(self, entries, vars, globals, this):
         self.entries = entries
         self.vars = vars
@@ -48,14 +48,17 @@ class Env(object):
         else:
             raise TypeError('Not an entity: {0}'.format(type(entry)))
 
-    def copy(self, this, local_vars=None):
-        if local_vars:
-            vars = self.vars.copy()
-            vars.update(local_vars)
-        else:
-            vars = self.vars
+    def make_expr_env(self, this, locals):
+        return ExprEnv(self, this, locals)
 
-        return Env(self.entries, vars, self.globals, this)
+
+class ExprEnv(object):
+    __slots__ = ('parent', 'this', 'locals')
+
+    def __init__(self, parent, this, locals):
+        self.parent = parent
+        self.this = this
+        self.locals = locals
 
 
 class CompiledL20n(object):
@@ -66,7 +69,7 @@ class CompiledL20n(object):
         if vars is None:
             vars = {}
         entries = {}
-        env = Env(entries, vars, {}, None)
+        env = L20nEnv(entries, vars, {}, None)
         for k, v in self._entries.iteritems():
             entries[k] = v.bind(env)
         return env
@@ -92,9 +95,9 @@ class Resolvable(object):
 
 
 class BoundEntity(Resolvable):
-    def __init__(self, entity, env):
+    def __init__(self, entity, lenv):
         self._entity = entity
-        self._env = env.copy(self)
+        self._env = lenv.make_expr_env(self, {})
 
     def resolve(self):
         return self._entity._content.evaluate_resolved(self._env)
@@ -117,19 +120,19 @@ class CompiledEntity(object):
         self._content = content
         self._attrs = attrs
 
-    def bind(self, env):
-        return BoundEntity(self, env)
+    def bind(self, lenv):
+        return BoundEntity(self, lenv)
 
 
 class BoundMacro(object):
-    def __init__(self, macro, env):
+    def __init__(self, macro, lenv):
         self._macro = macro
-        self._env = env
+        self._lenv = lenv
 
     def invoke(self, args):
         if len(args) != len(self._macro._arg_names):
             raise TypeError('Required {0} argument(s), got {1}'.format(len(self._macro._arg_names), len(args)))
-        return self._macro._expr.evaluate(self._env.copy(self, dict(zip(self._macro._arg_names, args))))
+        return self._macro._expr.evaluate(self._lenv.make_expr_env(self, dict(zip(self._macro._arg_names, args))))
 
 
 class CompiledMacro(object):
@@ -138,8 +141,8 @@ class CompiledMacro(object):
         self._arg_names = arg_names
         self._expr = expr
 
-    def bind(self, env):
-        return BoundMacro(self, env)
+    def bind(self, lenv):
+        return BoundMacro(self, lenv)
 
 
 class CompiledExpr(object):
@@ -344,7 +347,7 @@ class CompiledNamed(CompiledExpr):
 class CompiledEntryAccess(CompiledNamed):
     def evaluate(self, env):
         try:
-            return env.entries[self._name]
+            return env.parent.entries[self._name]
         except KeyError:
             raise NameError('Entry "{0}" is not defined'.format(self._name))
 
@@ -352,7 +355,10 @@ class CompiledEntryAccess(CompiledNamed):
 class CompiledVariableAccess(CompiledNamed):
     def evaluate(self, env):
         try:
-            return env.vars[self._name]
+            try:
+                return env.locals[self._name]
+            except KeyError:
+                return env.parent.vars[self._name]
         except KeyError:
             raise NameError('Variable "{0}" is not defined'.format(self._name))
 
@@ -360,7 +366,7 @@ class CompiledVariableAccess(CompiledNamed):
 class CompiledGlobalAccess(CompiledNamed):
     def evaluate(self, env):
         try:
-            return env.globals[self._name]
+            return env.parent.globals[self._name]
         except KeyError:
             raise NameError('Global "{0}" is not defined'.format(self._name))
 
@@ -405,7 +411,7 @@ class CompiledNot(CompiledUnary):
     evaluate_bool = evaluate
 
 
-class CompiledNegate(CompiledUnary):
+class CompiledNegative(CompiledUnary):
     def evaluate(self, env):
         return -self._arg.evaluate_number(env)
 
@@ -460,7 +466,7 @@ class CompiledAttributeAccess(CompiledExpr):
 
 class LazyHash(Resolvable):
     def __init__(self, env, items, index_item, default):
-        self._env = env.copy(env.this)
+        self._env = ExprEnv(env.parent, env.this, env.locals)
         self._items = items
         self._index_item = index_item
         self._default = default
@@ -644,6 +650,6 @@ logical_operators = {
 
 unary_operators = {
     '!': CompiledNot,
-    '-': CompiledNegate,
+    '-': CompiledNegative,
     '+': CompiledPositive,
 }
