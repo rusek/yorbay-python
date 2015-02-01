@@ -37,6 +37,11 @@ def tokenize_header(header):
             raise Exception('Invalid character: ' + c)
 
 
+class Context(object):
+    def __init__(self, vars):
+        self.vars = vars
+
+
 class StepCounter(object):
     def __init__(self):
         self._counter = 0
@@ -69,7 +74,7 @@ class Env(object):
             raise Exception('Section not found: {0}'.format(name))
 
         if type is not None and not isinstance(sect, type):
-            raise Exception('Invalid section type: expecting {0}, got{1}', type, sect.__class__)
+            raise Exception('Invalid section type: expecting {0}, got{1}'.format(type, sect.__class__))
 
         return sect
 
@@ -116,11 +121,15 @@ class SourceSection(Section):
 
     def run(self, env):
         try:
+            if self._syntax_name is None:
+                expected_syntax = None
+            else:
+                expected_syntax = env.run_section(self._syntax_name, type=SyntaxSection)
+
             print '{0} * running {1}...'.format(env.step(), self.name)
             syntax = parse_source(self._source)
-            if self._syntax_name is not None:
+            if expected_syntax is not None:
                 json_syntax = syntax.to_json()
-                expected_syntax = env.run_section(self._syntax_name, type=SyntaxSection)
                 if json_syntax != expected_syntax:
                     print format_json_diff(expected_syntax, json_syntax),
                     raise Exception('Section ' + self.name + ': source is invalid, got ' + repr(json_syntax) +
@@ -182,20 +191,27 @@ def format_json_diff(expected, actual):
 
 
 class CheckSection(Section):
-    def __init__(self, name, body, syntax):
+    def __init__(self, name, body, syntax, context):
         super(CheckSection, self).__init__(name)
         self._body = json.loads(body)
         self._syntax_name = syntax
+        self._context_name = context
 
     def run(self, env):
-        print '{0} * running {1}...'.format(env.step(), self.name)
         # Should accept either SyntaxSection or SourceSection, but currently SyntaxSection returns JSON and there's
         # no way to convert it to AST
-        compiled_l20n = compile_syntax(env.run_section(self._syntax_name, type=SourceSection))
+        syntax = env.run_section(self._syntax_name, type=SourceSection)
+        if self._context_name is None:
+            context = Context({})
+        else:
+            context = env.run_section(self._context_name, type=ContextSection)
+
+        print '{0} * running {1}...'.format(env.step(), self.name)
+        compiled_l20n = compile_syntax(syntax)
         for entry_name, expectation in self._body.iteritems():
             print '{0}    * checking {1}...'.format(env.step(), entry_name)
             try:
-                result = compiled_l20n.make_env({}).resolve_entity(entry_name)
+                result = compiled_l20n.make_env(context.vars).resolve_entity(entry_name)
             except:
                 if expectation is not False:
                     traceback.print_exc()
@@ -249,6 +265,15 @@ class WrapperSection(Section):
 
     def run(self, env):
         return self._wrapper
+
+
+class ContextSection(Section):
+    def __init__(self, name, body):
+        super(ContextSection, self).__init__(name)
+        self._context = Context(json.loads(body))
+
+    def run(self, env):
+        return self._context
 
 
 class ParamParser(object):
@@ -335,9 +360,13 @@ class HeaderParser(object):
             'check': SectionParser(
                 CheckSection,
                 syntax=RequiredParam(self.skip, 'ident'),
+                context=OptionalParam(None, self.skip, 'ident')
             ),
             'wrapper': SectionParser(
                 WrapperSection,
+            ),
+            'context': SectionParser(
+                ContextSection,
             ),
         }
 

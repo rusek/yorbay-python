@@ -1,4 +1,4 @@
-========================================== source(binaryOperators)
+========================================== source(operators)
 <trueAndTrue "{{ 1 == 1 && 1 == 1 ? 'true' : 'false' }}">
 <trueAndFalse "{{ 1 == 1 && 1 == 2 ? 'true' : 'false' }}">
 <falseAndTrue "{{ 1 == 2 && 1 == 1 ? 'true' : 'false' }}">
@@ -11,7 +11,7 @@
 
 <notTrue "{{ !(1 == 1) ? 'true' : 'false' }}">
 <notFalse "{{ !(1 == 2) ? 'true' : 'false' }}">
-========================================== check(binaryOperatorsChecks, syntax=binaryOperators)
+========================================== check(operatorsChecks, syntax=operators)
 {
     "trueAndTrue": "true",
     "trueAndFalse": "false",
@@ -25,4 +25,38 @@
 
     "notTrue": "false",
     "notFalse": "true"
+}
+========================================== source(operatorsProperties)
+<error() { $noSuchVar }>
+
+<andIsLazy "{{ 1 != 1 && error() ? 'true' : 'true' }}">
+<orIsLazy "{{ 1 == 1 || error() ? 'true' : 'true' }}">
+========================================== check(operatorsPropertiesChecks, syntax=operatorsProperties)
+{
+    "andIsLazy": "true",
+    "orIsLazy": "true"
+}
+========================================== source(operatorsMisuse)
+<andDoesNotWorkWithBooleanAndNumber "{{ 1 == 1 && 1 ? 'true' : 'false' }}">
+<andDoesNotWorkWithNumbers "{{ 1 && 1 ? 'true' : 'false' }}">
+<andDoesNotWorkWithStrings "{{ '' && '' ? 'true' : 'false' }}">
+
+<orDoesNotWorkWithBooleanAndNumber "{{ 1 != 1 || 1 ? 'true' : 'false' }}">
+<orDoesNotWorkWithNumbers "{{ 1 || 1 ? 'true' : 'false' }}">
+<orDoesNotWorkWithStrings "{{ '' || '' ? 'true' : 'false' }}">
+
+<notDoesNotWorkWithNumber "{{ !1 ? 'true' : 'false' }}">
+<notDoesNotWorkWithString "{{ !'' ? 'true' : 'false' }}">
+========================================== check(operatorsMisuseChecks, syntax=operatorsMisuse)
+{
+    "andDoesNotWorkWithBooleanAndNumber": false,
+    "andDoesNotWorkWithNumbers": false,
+    "andDoesNotWorkWithStrings": false,
+
+    "orDoesNotWorkWithBooleanAndNumber": false,
+    "orDoesNotWorkWithNumbers": false,
+    "orDoesNotWorkWithStrings": false,
+
+    "notDoesNotWorkWithNumber": false,
+    "notDoesNotWorkWithString": false
 }

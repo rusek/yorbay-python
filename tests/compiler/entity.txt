@@ -1,0 +1,81 @@
+========================================== source(entity)
+<hello "Hello, {{ $user }}!">
+<label {
+    *short: "Label",
+    long: "Long Label"
+}>
+<longLabel "{{ label.long }}">
+
+<thisTest {
+    *default: "prefix {{ ~.rest }}",
+    rest: "suffix"
+}>
+========================================== context(entityContext)
+{
+    "user": "tester"
+}
+========================================== check(entityChecks, syntax=entity, context=entityContext)
+{
+    "hello": "Hello, tester!",
+    "label": "Label",
+    "longLabel": "Long Label",
+    "thisTest": "prefix suffix"
+}
+========================================== source(hashLookupOrder)
+<hash[$key] {
+    one: "1st",
+    two: "2nd",
+    *other: "?",
+    three: "3rd"
+}>
+<hashOne "{{ hash.one }}">
+<hashFive "{{ hash.five }}">
+========================================== context(hashLookupOrderWithTwoContext)
+{"key": "two"}
+========================================== context(hashLookupOrderWithSevenContext)
+{"key": "seven"}
+========================================== check(hashLookupOrderWithTwoContextChecks, syntax=hashLookupOrder, context=hashLookupOrderWithTwoContext)
+{
+    "hash": "2nd",
+    "hashOne": "1st",
+    "hashFive": "2nd"
+}
+========================================== check(hashLookupOrderWithSevenContextChecks, syntax=hashLookupOrder, context=hashLookupOrderWithSevenContext)
+{
+    "hash": "?",
+    "hashOne": "1st",
+    "hashFive": "?"
+}
+========================================== check(hashLookupOrderWithoutContextChecks, syntax=hashLookupOrder)
+{
+    "hash": false,
+    "hashOne": "1st",
+    "hashFive": false
+}
+========================================== source(hashLookupOrderWithoutDefault)
+<hash[$key] {
+    one: "1st",
+    two: "2nd",
+    other: "?",
+    three: "3rd"
+}>
+<hashOne "{{ hash.one }}">
+<hashFive "{{ hash.five }}">
+========================================== check(hashLookupOrderWithoutDefaultWithTwoContextChecks, syntax=hashLookupOrderWithoutDefault, context=hashLookupOrderWithTwoContext)
+{
+    "hash": "2nd",
+    "hashOne": "1st",
+    "hashFive": "2nd"
+}
+========================================== check(hashLookupOrderWithoutDefaultWithSevenContextChecks, syntax=hashLookupOrderWithoutDefault, context=hashLookupOrderWithSevenContext)
+{
+    "hash": false,
+    "hashOne": "1st",
+    "hashFive": false
+}
+========================================== check(hashLookupOrderWithoutDefaultAndContextChecks, syntax=hashLookupOrderWithoutDefault)
+{
+    "hash": false,
+    "hashOne": "1st",
+    "hashFive": false
+}

@@ -86,3 +86,65 @@
     "notEqualResolvesLeftArgument": "true",
     "notEqualResolvesRightArgument": "true"
 }
+========================================== source(comparisonMisuse)
+<ignore($x) { "" }>
+<true() { 1 == 1 }>
+<null x:"">
+
+<equalsDoesNotWorkWithNumberAndString "{{ ignore(2 == "2") }}">
+<equalsDoesNotWorkWithBooleans "{{ ignore(true() == true()) }}">
+<equalsDoesNotWorkWithNulls "{{ ignore(null == null) }}">
+
+<notEqualDoesNotWorkWithNumberAndString "{{ ignore(2 != "2") }}">
+<notEqualDoesNotWorkWithBooleans "{{ ignore(true() != true()) }}">
+<notEqualDoesNotWorkWithNulls "{{ ignore(null != null) }}">
+
+<lessThanDoesNotWorkWithNumberAndString "{{ ignore(1 < "2") }}">
+<lessThanDoesNotWorkWithStrings "{{ ignore("1" < "2") }}">
+<lessThanDoesNotWorkWithBooleans "{{ ignore(true() < true()) }}">
+<lessThanDoesNotWorkWithNulls "{{ ignore(null < null) }}">
+
+<lessEqualDoesNotWorkWithNumberAndString "{{ ignore(1 <= "2") }}">
+<lessEqualDoesNotWorkWithStrings "{{ ignore("1" <= "2") }}">
+<lessEqualDoesNotWorkWithBooleans "{{ ignore(true() <= true()) }}">
+<lessEqualDoesNotWorkWithNulls "{{ ignore(null <= null) }}">
+
+<greaterThanDoesNotWorkWithNumberAndString "{{ ignore(1 > "2") }}">
+<greaterThanDoesNotWorkWithStrings "{{ ignore("1" > "2") }}">
+<greaterThanDoesNotWorkWithBooleans "{{ ignore(true() > true()) }}">
+<greaterThanDoesNotWorkWithNulls "{{ ignore(null > null) }}">
+
+<greaterEqualDoesNotWorkWithNumberAndString "{{ ignore(1 >= "2") }}">
+<greaterEqualDoesNotWorkWithStrings "{{ ignore("1" >= "2") }}">
+<greaterEqualDoesNotWorkWithBooleans "{{ ignore(true() >= true()) }}">
+<greaterEqualDoesNotWorkWithNulls "{{ ignore(null >= null) }}">
+========================================== check(comparisonMisuseChecks, syntax=comparisonMisuse)
+{
+    "equalsDoesNotWorkWithNumberAndString": false,
+    "equalsDoesNotWorkWithBooleans": false,
+    "equalsDoesNotWorkWithNulls": false,
+
+    "notEqualDoesNotWorkWithNumberAndString": false,
+    "notEqualDoesNotWorkWithBooleans": false,
+    "notEqualDoesNotWorkWithNulls": false,
+
+    "lessThanDoesNotWorkWithNumberAndString": false,
+    "lessThanDoesNotWorkWithStrings": false,
+    "lessThanDoesNotWorkWithBooleans": false,
+    "lessThanDoesNotWorkWithNulls": false,
+
+    "lessEqualDoesNotWorkWithNumberAndString": false,
+    "lessEqualDoesNotWorkWithStrings": false,
+    "lessEqualDoesNotWorkWithBooleans": false,
+    "lessEqualDoesNotWorkWithNulls": false,
+
+    "greaterThanDoesNotWorkWithNumberAndString": false,
+    "greaterThanDoesNotWorkWithStrings": false,
+    "greaterThanDoesNotWorkWithBooleans": false,
+    "greaterThanDoesNotWorkWithNulls": false,
+
+    "greaterEqualDoesNotWorkWithNumberAndString": false,
+    "greaterEqualDoesNotWorkWithStrings": false,
+    "greaterEqualDoesNotWorkWithBooleans": false,
+    "greaterEqualDoesNotWorkWithNulls": false
+}

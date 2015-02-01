@@ -14,6 +14,64 @@
     "tenModuloThree": "1",
     "tenDivideByFourTimesTwo": "5"
 }
+========================================== source(binaryOperatorsMisuse)
+<ignore($x) { "" }>
+<true() { 1 == 1 }>
+<null x:"">
+<hash {key: "value"}> /* no default! */
+
+<cannotAddNumberAndString "{{ ignore(1 + "") }}">
+<cannotAddNumberAndBoolean "{{ ignore(1 + true()) }}">
+<cannotAddNumberAndNull "{{ ignore(1 + null) }}">
+<cannotAddNumberAndHash "{{ ignore(1 + hash) }}">
+
+<cannotSubtractNumberAndString "{{ ignore(1 - "") }}">
+<cannotSubtractNumberAndBoolean "{{ ignore(1 - true()) }}">
+<cannotSubtractNumberAndNull "{{ ignore(1 - null) }}">
+<cannotSubtractNumberAndHash "{{ ignore(1 - hash) }}">
+
+<cannotMultiplyNumberAndString "{{ ignore(1 * "") }}">
+<cannotMultiplyNumberAndBoolean "{{ ignore(1 * true()) }}">
+<cannotMultiplyNumberAndNull "{{ ignore(1 * null) }}">
+<cannotMultiplyNumberAndHash "{{ ignore(1 * hash) }}">
+
+<cannotDivideNumberAndString "{{ ignore(1 / "") }}">
+<cannotDivideNumberAndBoolean "{{ ignore(1 / true()) }}">
+<cannotDivideNumberAndNull "{{ ignore(1 / null) }}">
+<cannotDivideNumberAndHash "{{ ignore(1 / hash) }}">
+
+<cannotModuloNumberAndString "{{ ignore(1 % "") }}">
+<cannotModuloNumberAndBoolean "{{ ignore(1 % true()) }}">
+<cannotModuloNumberAndNull "{{ ignore(1 % null) }}">
+<cannotModuloNumberAndHash "{{ ignore(1 % hash) }}">
+
+========================================== check(binaryOperatorsMisuseChecks, syntax=binaryOperatorsMisuse)
+{
+    "cannotAddNumberAndString": false,
+    "cannotAddNumberAndBoolean": false,
+    "cannotAddNumberAndNull": false,
+    "cannotAddNumberAndHash": false,
+
+    "cannotSubtractNumberAndString": false,
+    "cannotSubtractNumberAndBoolean": false,
+    "cannotSubtractNumberAndNull": false,
+    "cannotSubtractNumberAndHash": false,
+
+    "cannotMultiplyNumberAndString": false,
+    "cannotMultiplyNumberAndBoolean": false,
+    "cannotMultiplyNumberAndNull": false,
+    "cannotMultiplyNumberAndHash": false,
+
+    "cannotDivideNumberAndString": false,
+    "cannotDivideNumberAndBoolean": false,
+    "cannotDivideNumberAndNull": false,
+    "cannotDivideNumberAndHash": false,
+
+    "cannotModuloNumberAndString": false,
+    "cannotModuloNumberAndBoolean": false,
+    "cannotModuloNumberAndNull": false,
+    "cannotModuloNumberAndHash": false
+}
 ========================================== source(unaryOperators)
 <minusThree "{{ -(3) }}">
 <plusThree "{{ +(3) }}">
@@ -21,4 +79,31 @@
 {
     "minusThree": "-3",
     "plusThree": "3"
+}
+========================================== source(unaryOperatorsMisuse)
+<ignore($x) { "" }>
+<true() { 1 == 1 }>
+<null x:"">
+<hash {key: "value"}> /* no default! */
+
+<cannotNegateString "{{ ignore(-"") }}">
+<cannotNegateBoolean "{{ ignore(-true()) }}">
+<cannotNegateNull "{{ ignore(-null) }}">
+<cannotNegateHash "{{ ignore(-hash) }}">
+
+<positiveDoesNotWorkWithString "{{ ignore(-"") }}">
+<positiveDoesNotWorkWithBoolean "{{ ignore(-true()) }}">
+<positiveDoesNotWorkWithNull "{{ ignore(-null) }}">
+<positiveDoesNotWorkWithHash "{{ ignore(-hash) }}">
+========================================== check(unaryOperatorsMisuseChecks, syntax=unaryOperatorsMisuse)
+{
+    "cannotNegateString": false,
+    "cannotNegateBoolean": false,
+    "cannotNegateNull": false,
+    "cannotNegateHash": false,
+
+    "positiveDoesNotWorkWithString": false,
+    "positiveDoesNotWorkWithBoolean": false,
+    "positiveDoesNotWorkWithNull": false,
+    "positiveDoesNotWorkWithHash": false
 }
