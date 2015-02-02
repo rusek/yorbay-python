@@ -132,5 +132,30 @@ class TestFromFile(unittest.TestCase):
         self.assertEqual(tr('entity'), "some value")
 
 
+class TestErrorHook(unittest.TestCase):
+    def setUp(self):
+        self.error = None
+
+    def test_error_hook_on_missing_entity(self):
+        tr = Context.from_source('', error_hook=self.store_error)
+        tr('noSuchEntity')
+        self.assertTrue(isinstance(self.error, NameError))
+
+    def test_error_hook_on_missing_variable(self):
+        tr = Context.from_file(StringIO('<a "{{ $missing }}">'), error_hook=self.store_error)
+        self.assertTrue(tr('a'), '{{ $missing }}')
+        self.assertTrue(isinstance(self.error, NameError))
+
+    def test_raise_error_hook(self):
+        tr = Context.from_file(os.path.join(DIR, 'samples', 'numbers.l20n'), error_hook=self.raise_error)
+        self.assertRaises(NameError, tr, 'noSuchEntity')
+
+    def store_error(self, exc_type, exc_value, traceback):
+        self.assertTrue(isinstance(exc_value, exc_type))
+        self.error = exc_value
+
+    def raise_error(self, exc_type, exc_value, traceback):
+        raise exc_type, exc_value, traceback
+
 if __name__ == '__main__':
     unittest.main()
