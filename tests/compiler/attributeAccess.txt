@@ -1,0 +1,74 @@
+========================================== source(attributeAccess)
+<attributes
+    attr:"attrVal"
+    richAttr[$key]: {
+        first: "firstVal",
+        second: "secondVal",
+        *default: "defaultVal"
+    }
+    richAttrWithoutDefault[$key]: {
+        first: "firstVal",
+        second: "secondVal"
+    }
+>
+
+<trivialAttribute "{{ attributes::attr }}">
+<attributeWithMatchedPropertyAccess "{{ attributes::richAttr.first }}">
+<attributeWithUnmatchedPropertyAccess "{{ attributes::richAttr.last }}">
+<attributeWithMatchedPropertyAccessNoDefault "{{ attributes::richAttrWithoutDefault.first }}">
+<attributeWithUnmatchedPropertyAccessNoDefault "{{ attributes::richAttrWithoutDefault.last }}">
+========================================== check(attributeAccessChecks, syntax=attributeAccess, context=dummyKeyContext)
+{
+    "trivialAttribute": "attrVal",
+    "attributeWithMatchedPropertyAccess": "firstVal",
+    "attributeWithUnmatchedPropertyAccess": "defaultVal",
+    "attributeWithMatchedPropertyAccessNoDefault": "firstVal",
+    "attributeWithUnmatchedPropertyAccessNoDefault": false
+}
+========================================== check(attributeAccessWithSecondKeyContextChecks, syntax=attributeAccess, context=secondKeyContext)
+{
+    "attributeWithMatchedPropertyAccess": "firstVal",
+    "attributeWithUnmatchedPropertyAccess": "secondVal",
+    "attributeWithMatchedPropertyAccessNoDefault": "firstVal",
+    "attributeWithUnmatchedPropertyAccessNoDefault": "secondVal"
+}
+========================================== context(dummyKeyContext)
+{
+    "key": "dummy"
+}
+========================================== context(secondKeyContext)
+{
+    "key": "second"
+}
+
+========================================== source(computedAttributeAccess)
+<attributes first:"firstVal" second:"secondVal">
+<firstComputedAccess "{{ attributes::[$firstAttr] }}">
+<secondComputedAccess "{{ attributes::[$secondAttr] }}">
+<badComputedAccessType "{{ attributes::[$badAttrType] }}">
+<badComputedAccessName "{{ attributes::[$badAttrName] }}">
+========================================== context(computedAttributeAccessContext)
+{
+    "firstAttr": "first",
+    "secondAttr": "second",
+    "badAttrType": 42,
+    "badAttrName": "noSuchAttr"
+}
+========================================== check(computedAttributeAccessChecks, syntax=computedAttributeAccess, context=computedAttributeAccessContext)
+{
+    "firstComputedAccess": "firstVal",
+    "secondComputedAccess": "secondVal",
+    "badComputedAccessType": false,
+    "badComputedAccessName": false
+}
+========================================== source(attributeAccessMisuse)
+<macro() { "" }>
+<complexEntity {*key1: {*key2: {*key3: "val"}}} attr:"attrVal">
+
+<attributeAccessDoesNotWorkWithMacro "{{ macro::attr }}">
+<attributeAccessDoesNotWorkWithPartiallyResolvedEntity "{{ (complexEntity.key1)::attr }}">
+========================================== check(attributeAccessMisuseChecks, syntax=attributeAccessMisuse)
+{
+    "attributeAccessDoesNotWorkWithMacro": false,
+    "attributeAccessDoesNotWorkWithPartiallyResolvedEntity": false
+}

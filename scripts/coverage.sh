@@ -4,11 +4,11 @@ cd "$( dirname "$0" )/.."
 
 coverage erase
 
-coverage run -a --source=yorbay ./scripts/run_tests.py ./tests/*/*.txt
+coverage run -a ./scripts/run_tests.py ./tests/*/*.txt
 
 for SCRIPT_FILE in ./tests/*_test.py
 do
-    coverage run -a --source=yorbay "$SCRIPT_FILE"
+    coverage run -a "$SCRIPT_FILE"
 done
 
 coverage html

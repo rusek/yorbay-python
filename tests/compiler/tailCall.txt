@@ -22,3 +22,17 @@
     "sumRange0To5": "15",
     "sumRange7To15": "99"
 }
+========================================== source(tailOptimizedWithBadArguments)
+<tailOptimized($x, $y) { $x < $y ? tailOptimized($x + 1, $y) : $x }>
+
+<noArgs "{{ tailOptimized() }}">
+<oneArg "{{ tailOptimized(1) }}">
+<twoArgsCorrect "{{ tailOptimized(1, 7) }}">
+<threeArgs "{{ tailOptimized(1, 7, 9) }}">
+========================================== check(tailOptimizedWithBadArgumentsChecks, syntax=tailOptimizedWithBadArguments)
+{
+    "noArgs": false,
+    "oneArg": false,
+    "twoArgsCorrect": "7",
+    "threeArgs": false
+}

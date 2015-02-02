@@ -1,0 +1,7 @@
+========================================== source(globalAccess)
+/* Globals are not currently supported, so there is not much to test */
+<nonExistingGlobalAccess "{{ @noSuchGlobal }}">
+========================================== check(globalAccessChecks, syntax=globalAccess)
+{
+    "nonExistingGlobalAccess": false
+}

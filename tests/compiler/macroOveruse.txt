@@ -1,0 +1,17 @@
+========================================== source(mappingFunction)
+<dup($x) { "" + $x + $x }>
+<mapPair($f, $pair) { {first: "{{ $f($pair.first) }}", second: "{{ $f($pair.second) }}"} }>
+<showPair($pair) { $pair.first + ", " + $pair.second }>
+<shouldApplyMappingFunction "{{ showPair(mapPair(dup, {first: 'aa', second: 'xyz'})) }}">
+========================================== check(mappingFunctionChecks, syntax=mappingFunction)
+{
+    "shouldApplyMappingFunction": "aaaa, xyzxyz"
+}
+========================================== source(invokeFunction)
+<invoke($f) { $f() }>
+<returnDigits() { "0123456789" }>
+<shouldInvokeGivenMacro "{{ invoke(returnDigits) }}">
+========================================== check(invokeFunctionChecks, syntax=invokeFunction)
+{
+    "shouldInvokeGivenMacro": "0123456789"
+}

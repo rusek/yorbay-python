@@ -1,0 +1,10 @@
+========================================== source(entryAccess)
+<entry "ok">
+
+<existingEntryAccess "{{ entry }}">
+<nonExistingEntryAccess "{{ noSuchEntry }}">
+========================================== check(entryAccessChecks, syntax=entryAccess)
+{
+    "existingEntryAccess": "ok",
+    "nonExistingEntryAccess": false
+}

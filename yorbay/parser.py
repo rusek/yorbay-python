@@ -471,6 +471,8 @@ class Parser(object):
                 pass
             elif self.try_skip_token('}'):
                 return syntax.Hash(content)
+            else:
+                raise self.error_expected('"," or "}"')
 
     def parse_kvp(self):
         key = self.parse_identifier()

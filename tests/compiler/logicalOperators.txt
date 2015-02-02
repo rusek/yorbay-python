@@ -60,3 +60,17 @@
     "notDoesNotWorkWithNumber": false,
     "notDoesNotWorkWithString": false
 }
+========================================== source(operatorsWithVariables)
+/* Use of variables should disable some optimizations (for example, we know that the result of '==' is bool) */
+<notAppliedToVariable "{{ !$off ? 'true' : 'false' }}">
+<andAppliedToVariable "{{ 1 == 1 && $on ? 'true' : 'false' }}">
+========================================== context(operatorsWithVariablesContext)
+{
+    "on": true,
+    "off": false
+}
+========================================== check(operatorsWithVariablesChecks, syntax=operatorsWithVariables, context=operatorsWithVariablesContext)
+{
+    "notAppliedToVariable": "true",
+    "andAppliedToVariable": "true"
+}

@@ -1,0 +1,10 @@
+========================================== source(callMisuse)
+/* call expression is mostly tested in macro tests */
+
+<entity "">
+
+<shouldNotCallEntity "{{ entity() }}">
+========================================== check(callMisuseChecks, syntax=callMisuse)
+{
+    "shouldNotCallEntity": false
+}
