@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 
+from collections import defaultdict
 import os
 import sys
 import unittest
@@ -18,6 +19,14 @@ def delete_item(obj, item):
 
 def set_item(obj, key, value):
     obj[key] = value
+
+
+class MyError(Exception):
+    pass
+
+
+def raise_my_error(*args, **kwargs):
+    raise MyError()
 
 
 class TestContext(unittest.TestCase):
@@ -52,6 +61,8 @@ class TestContext(unittest.TestCase):
             >
 
             <withoutContent dummy:"dummy">
+
+            <accessObjKeyProp "{{ $obj.key }}">
 
             <luckyNum "Your lucky number is {{ $num }}">
         """)
@@ -97,6 +108,9 @@ class TestContext(unittest.TestCase):
 
     def test_entity_without_content_should_resolve_to_empty_string(self):
         self.assertEqual(self.context('withoutContent'), '')
+
+    def test_direct_exception_subclasses_are_not_supressed(self):
+        self.assertRaises(MyError, self.context, 'accessObjKeyProp', obj=defaultdict(raise_my_error))
 
 
 class TestFromFile(unittest.TestCase):
