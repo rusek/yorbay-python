@@ -2,6 +2,7 @@ from __future__ import division
 
 import sys
 
+NULL = object()
 BOOL = object()
 NUMBER = object()
 STRING = object()
@@ -15,6 +16,12 @@ Tail = TailType()
 
 
 def get_type(val):
+    # Caution: compiler expects that val[str] raises TypeError if get_type(val) is not OBJECT.
+    # If this assumption ever becomes false, the compiler should check if get_type(val is OBJECT
+    # prior to calling val[str].
+
+    if val is None:
+        return NULL
     if isinstance(val, bool):
         return BOOL
     if isinstance(val, basestring):
@@ -40,30 +47,22 @@ class L20nEnv(object):
         self.globals = globals
         self.this = this
 
+    def _get_entity(self, entity_name):
+        try:
+            entry = self.entries[entity_name]
+        except KeyError:
+            raise NameError('Entity "{0}" is not defined'.format(entity_name))
+
+        if isinstance(entry, CompiledEntity):
+            return entry.bind(self)
+        else:
+            raise TypeError('Not an entity: {0}'.format(type(entry)))
+
     def resolve_entity(self, entity_name):
-        try:
-            entry = self.entries[entity_name]
-        except KeyError:
-            raise NameError('Entity "{0}" is not defined'.format(entity_name))
+        return self._get_entity(entity_name).resolve()
 
-        if isinstance(entry, CompiledEntity):
-            return entry.bind(self).resolve()
-        else:
-            raise TypeError('Not an entity: {0}'.format(type(entry)))
-
-    def resolve_attribute(self, entity_name, attribute_name):
-        try:
-            entry = self.entries[entity_name]
-        except KeyError:
-            raise NameError('Entity "{0}" is not defined'.format(entity_name))
-
-        if isinstance(entry, CompiledEntity):
-            return entry.bind(self).resolve_attribute(attribute_name)
-        else:
-            raise TypeError('Not an entity: {0}'.format(type(entry)))
-
-    def make_expr_env(self, locals):
-        return ExprEnv(self, locals)
+    def resolve_attribute(self, entity_name, attr_name):
+        return self._get_entity(entity_name).resolve_attribute(attr_name)
 
 
 class ExprEnv(object):
@@ -103,7 +102,7 @@ class CompiledEntry(object):
 class BoundEntity(Resolvable):
     def __init__(self, entity, lenv):
         self._entity = entity
-        self._env = lenv.make_expr_env(())
+        self._env = ExprEnv(lenv, ())
 
     def resolve(self):
         return self._entity._content.evaluate_resolved(self._env)
@@ -111,13 +110,21 @@ class BoundEntity(Resolvable):
     resolve_once = resolve
 
     def __getitem__(self, key):
-        return self._entity._content.evaluate(self._env)[key]  # xxxx should be consistent with PropertyAccess!
+        return self._entity._content.evaluate(self._env)[key]
 
     def get_attribute(self, name):
-        return self._entity._attrs[name].evaluate(self._env)
+        try:
+            attr = self._entity._attrs[name]
+        except KeyError:
+            raise NameError('Attribute "{0}" is not defined'.format(name))
+        return attr.evaluate(self._env)
 
     def resolve_attribute(self, name):
-        return self._entity._attrs[name].evaluate_resolved(self._env)
+        try:
+            attr = self._entity._attrs[name]
+        except KeyError:
+            raise NameError('Attribute "{0}" is not defined'.format(name))
+        return attr.evaluate_resolved(self._env)
 
 
 class CompiledEntity(CompiledEntry):
@@ -147,7 +154,7 @@ class BoundMacro(object):
     def invoke(self, args):
         if len(args) != len(self._macro._arg_names):
             raise TypeError('Required {0} argument(s), got {1}'.format(len(self._macro._arg_names), len(args)))
-        return self._macro._expr.evaluate(self._lenv.make_expr_env(args))
+        return self._macro._expr.evaluate(ExprEnv(self._lenv, args))
 
 
 class CompiledMacro(CompiledEntry):
@@ -167,7 +174,7 @@ class BoundTailMacro(BoundMacro):
     def invoke(self, args):
         if len(args) != len(self._macro._arg_names):
             raise TypeError('Required {0} argument(s), got {1}'.format(len(self._macro._arg_names), len(args)))
-        env = self._lenv.make_expr_env(args)
+        env = ExprEnv(self._lenv, args)
         val = Tail
         while val is Tail:
             val = self._macro._expr.evaluate(env)
@@ -185,13 +192,14 @@ class CompiledExpr(object):
 
     def evaluate_resolved(self, env):
         val = self.evaluate(env)
-        while True:
-            if isinstance(val, Resolvable):
-                val = val.resolve_once()
-            else:
-                if get_type(val) is OBJECT:
-                    raise TypeError('Required primitive type, got {0}'.format(type(val)))
-                return val
+
+        while isinstance(val, Resolvable):
+            val = val.resolve_once()
+
+        if get_type(val) is OBJECT:
+            raise TypeError('Required primitive type, got {0}'.format(type(val)))
+
+        return val
 
     def evaluate_bool(self, env):
         val = self.evaluate_resolved(env)
@@ -353,14 +361,14 @@ class CompiledMultiply(CompiledBinary):
 
 class CompiledDivide(CompiledBinary):
     def evaluate(self, env):
-        return self._left.evaluate_number(env) / self._right.evaluate_number(env)  # xxxx zero, truediv !!
+        return self._left.evaluate_number(env) / self._right.evaluate_number(env)
 
     evaluate_number = evaluate
 
 
 class CompiledModulo(CompiledBinary):
     def evaluate(self, env):
-        return self._left.evaluate_number(env) % self._right.evaluate_number(env)  # xxxx zero
+        return self._left.evaluate_number(env) % self._right.evaluate_number(env)
 
     evaluate_number = evaluate
 
@@ -429,7 +437,7 @@ class CompiledComplexString(CompiledExpr):
                 item.evaluate_placeable(env, buf)
         except ErrorWithSource as e:
             raise ErrorWithSource(e.cause, self._source), None, sys.exc_info()[2]
-        except Exception as e:
+        except StandardError as e:
             raise ErrorWithSource(e, self._source), None, sys.exc_info()[2]
 
         return ''.join(buf)
@@ -501,7 +509,7 @@ class CompiledPropertyAccess(CompiledExpr):
         expr_val = self._expr.evaluate(env)
         prop_val = self._prop.evaluate_string(env)
 
-        return expr_val[prop_val]  # xxxxxxx check if operation supported
+        return expr_val[prop_val]
 
 
 class CompiledAttributeAccess(CompiledExpr):
@@ -635,10 +643,15 @@ def compile_macro(cstate, macro):
     return macro.id.name, compiled_macro
 
 
+def compile_import_statement(cstate, node):
+    raise TypeError('Import statements are not currently supported')
+
+
 entry_dispatch = {
     'Comment': lambda cstate, node: None,
     'Entity': compile_entity,
     'Macro': compile_macro,
+    'ImportStatement': compile_import_statement,
 }
 
 

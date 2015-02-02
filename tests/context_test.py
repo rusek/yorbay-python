@@ -51,6 +51,8 @@ class TestContext(unittest.TestCase):
                 indexError[$noSuchVar]:{k1: "v1", k2: "v2"}
             >
 
+            <withoutContent dummy:"dummy">
+
             <luckyNum "Your lucky number is {{ $num }}">
         """)
 
@@ -92,6 +94,9 @@ class TestContext(unittest.TestCase):
 
     def test_context_variable_must_be_string(self):
         self.assertRaises(TypeError, set_item, self.context, 1, 'val')
+
+    def test_entity_without_content_should_resolve_to_empty_string(self):
+        self.assertEqual(self.context('withoutContent'), '')
 
 
 class TestFromFile(unittest.TestCase):

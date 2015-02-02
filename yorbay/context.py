@@ -59,10 +59,12 @@ class Context(object):
         pos = query.find('::')
         try:
             if pos == -1:
-                return env.resolve_entity(query)
+                # Entities without content resolve to None, but this function is supposed
+                # to always return strings, so None should be replaced with ''
+                return env.resolve_entity(query) or ''
             else:
                 return env.resolve_attribute(query[:pos], query[pos + 2:])
         except ErrorWithSource as e:
             return e.source
-        except:
+        except StandardError:
             return query
