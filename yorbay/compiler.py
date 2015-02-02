@@ -41,16 +41,24 @@ class L20nEnv(object):
         self.this = this
 
     def resolve_entity(self, entity_name):
-        entry = self.entries[entity_name]
-        if isinstance(entry, BoundEntity):
-            return entry.resolve()
+        try:
+            entry = self.entries[entity_name]
+        except KeyError:
+            raise NameError('Entity "{0}" is not defined'.format(entity_name))
+
+        if isinstance(entry, CompiledEntity):
+            return entry.bind(self).resolve()
         else:
             raise TypeError('Not an entity: {0}'.format(type(entry)))
 
     def resolve_attribute(self, entity_name, attribute_name):
-        entry = self.entries[entity_name]
-        if isinstance(entry, BoundEntity):
-            return entry.resolve_attribute(attribute_name)
+        try:
+            entry = self.entries[entity_name]
+        except KeyError:
+            raise NameError('Entity "{0}" is not defined'.format(entity_name))
+
+        if isinstance(entry, CompiledEntity):
+            return entry.bind(self).resolve_attribute(attribute_name)
         else:
             raise TypeError('Not an entity: {0}'.format(type(entry)))
 
@@ -69,19 +77,26 @@ class ExprEnv(object):
 class CompiledL20n(object):
     def __init__(self, entries):
         self._entries = entries
+        self.direct_queries = {}
+        for entry in entries.itervalues():
+            entry.populate_direct_queries(self.direct_queries)
 
     def make_env(self, vars=None):
         if vars is None:
             vars = {}
-        entries = {}
-        env = L20nEnv(entries, vars, {}, None)
-        for k, v in self._entries.iteritems():
-            entries[k] = v.bind(env)
-        return env
+        return L20nEnv(self._entries, vars, {}, None)
 
 
 class Resolvable(object):
     def resolve_once(self):
+        raise NotImplementedError
+
+
+class CompiledEntry(object):
+    def bind(self, lenv):
+        raise NotImplementedError
+
+    def populate_direct_queries(self, queries):
         raise NotImplementedError
 
 
@@ -105,7 +120,7 @@ class BoundEntity(Resolvable):
         return self._entity._attrs[name].evaluate_resolved(self._env)
 
 
-class CompiledEntity(object):
+class CompiledEntity(CompiledEntry):
     def __init__(self, name, content, attrs):
         self._name = name
         self._content = content
@@ -113,6 +128,15 @@ class CompiledEntity(object):
 
     def bind(self, lenv):
         return BoundEntity(self, lenv)
+
+    def populate_direct_queries(self, queries):
+        direct_string = self._content.get_direct_string()
+        if direct_string is not None:
+            queries[self._name] = direct_string
+        for attr_name, attr_expr in self._attrs.iteritems():
+            direct_string = attr_expr.get_direct_string()
+            if direct_string is not None:
+                queries['{0}::{1}'.format(self._name, attr_name)] = direct_string
 
 
 class BoundMacro(object):
@@ -126,7 +150,7 @@ class BoundMacro(object):
         return self._macro._expr.evaluate(self._lenv.make_expr_env(args))
 
 
-class CompiledMacro(object):
+class CompiledMacro(CompiledEntry):
     def __init__(self, name, arg_names, expr):
         self._name = name
         self._arg_names = arg_names
@@ -134,6 +158,9 @@ class CompiledMacro(object):
 
     def bind(self, lenv):
         return BoundMacro(self, lenv)
+
+    def populate_direct_queries(self, queries):
+        pass
 
 
 class BoundTailMacro(BoundMacro):
@@ -195,6 +222,9 @@ class CompiledExpr(object):
             raise TypeError('Required number or string, got {0}'.format(type(value)))
         buf.append(value)
 
+    def get_direct_string(self):
+        return None
+
 
 class CompiledConditional(CompiledExpr):
     def __init__(self, test, consequent, alternate):
@@ -237,6 +267,9 @@ class CompiledString(CompiledLiteral):
 
     def evaluate_placeable(self, env, buf):
         buf.append(self._value)
+
+    def get_direct_string(self):
+        return self._value
 
 
 class CompiledBinary(CompiledExpr):
@@ -354,7 +387,7 @@ class CompiledNamed(CompiledExpr):
 class CompiledEntryAccess(CompiledNamed):
     def evaluate(self, env):
         try:
-            return env.parent.entries[self._name]
+            return env.parent.entries[self._name].bind(env.parent)
         except KeyError:
             raise NameError('Entry "{0}" is not defined'.format(self._name))
 

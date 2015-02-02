@@ -37,6 +37,15 @@ class Context(object):
         del self._vars[key]
 
     def __call__(self, query, **local_vars):
+        # Fast path: if the content of an entity or an attribute is a simple string, then
+        # we do not have to create execution environment - we can use direct_queries mapping
+        # instead
+        value = self._l20n.direct_queries.get(query)
+        if value is not None:
+            return value
+
+        # Fast path is not available. Construct variable mapping, trying to avoid unnecessary
+        # dict merging.
         if not local_vars:
             vars = self._vars
         elif not self._vars:
@@ -48,17 +57,12 @@ class Context(object):
 
         env = self._l20n.make_env(vars)
         pos = query.find('::')
-        if pos == -1:
-            try:
+        try:
+            if pos == -1:
                 return env.resolve_entity(query)
-            except ErrorWithSource as e:
-                return e.source
-            except:
-                return query
-        else:
-            try:
+            else:
                 return env.resolve_attribute(query[:pos], query[pos + 2:])
-            except ErrorWithSource as e:
-                return e.source
-            except:
-                return query
+        except ErrorWithSource as e:
+            return e.source
+        except:
+            return query
