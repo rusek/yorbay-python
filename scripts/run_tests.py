@@ -1,9 +1,9 @@
 #!/usr/bin/env python
 
+import codecs
 import copy
 import json
 import os
-import re
 import sys
 import traceback
 
@@ -457,7 +457,7 @@ section_prefix = '=' * 42 + ' '
 
 
 def run_file(test_def, step_counter):
-    with open(test_def) as test_file:
+    with codecs.open(test_def, encoding='UTF-8') as test_file:
         header = None
         body = None
         env = Env(step_counter)

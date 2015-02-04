@@ -1,5 +1,6 @@
 import sys
 
+from .loader import default_loader
 from .parser import parse_source
 from .compiler import compile_syntax, ErrorWithSource
 
@@ -17,8 +18,7 @@ class Context(object):
     @classmethod
     def from_file(cls, f, **kwargs):
         if isinstance(f, basestring):
-            with open(f) as f:
-                return Context(compile_syntax(parse_source(f.read())), **kwargs)
+                return Context(compile_syntax(parse_source(default_loader.load_source(f))), **kwargs)
         else:
             return Context(compile_syntax(parse_source(f.read())), **kwargs)
 

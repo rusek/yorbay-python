@@ -131,6 +131,11 @@ class TestFromFile(unittest.TestCase):
         tr = Context.from_file(f)
         self.assertEqual(tr('entity'), "some value")
 
+    def test_unicode_load_by_path(self):
+        tr = Context.from_file(os.path.join(DIR, 'samples', 'unicode-de.l20n'))
+        self.assertEqual(tr('key'), u'Schl\xfcssel')
+        self.assertEqual(tr('keyEscaped'), u'Schl\xfcssel')
+
 
 class TestErrorHook(unittest.TestCase):
     def setUp(self):

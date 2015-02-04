@@ -32,6 +32,14 @@
     "type": "String",
     "content": "\u1256"
 }
+========================================== source(escapedAndUnescapedNonAscii, syntax=escapedAndUnescapedNonAsciiSyntax)
+<a "ę\u0105">
+========================================== syntax(escapedAndUnescapedNonAsciiSyntax, wrapper=valueWrapper)
+{
+    "type": "String",
+    "content": "\u0119\u0105"
+
+}
 ========================================== source(copyrightEscapeUppercase, syntax=copyrightEscapeSyntax)
 <a "\u00A9">
 ========================================== source(copyrightEscapeLowercase, syntax=copyrightEscapeSyntax)
