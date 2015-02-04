@@ -10,7 +10,7 @@ import traceback
 sys.path[0] = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 from yorbay.parser import parse_source, ParseError
-from yorbay.compiler import compile_syntax, ErrorWithSource
+from yorbay.compiler import compile_syntax, link, ErrorWithSource
 
 
 def tokenize_header(header):
@@ -209,7 +209,10 @@ class CheckSection(Section):
             context = env.run_section(self._context_name, type=ContextSection)
 
         print '{0} * running {1}...'.format(env.step(), self.name)
-        compiled_l20n = compile_syntax(syntax)
+        cstate, import_paths, out_import_cstates = compile_syntax(syntax)
+        if import_paths:
+            raise Exception('Unexpected import paths')
+        compiled_l20n = link(cstate)
         for entry_name, expectation in self._body.iteritems():
             print '{0}    * checking {1}...'.format(env.step(), entry_name)
             try:

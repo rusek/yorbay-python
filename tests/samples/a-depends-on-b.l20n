@@ -1,0 +1,3 @@
+import("b-depends-on-c.l20n")
+
+<a "A">

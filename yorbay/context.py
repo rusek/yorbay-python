@@ -1,8 +1,7 @@
 import sys
 
-from .loader import default_loader
-from .parser import parse_source
-from .compiler import compile_syntax, ErrorWithSource
+from .builder import build_from_path, build_from_source
+from .compiler import ErrorWithSource
 
 
 class Context(object):
@@ -13,14 +12,14 @@ class Context(object):
 
     @classmethod
     def from_source(cls, source, **kwargs):
-        return Context(compile_syntax(parse_source(source)), **kwargs)
+        return Context(build_from_source(source, ''), **kwargs)
 
     @classmethod
     def from_file(cls, f, **kwargs):
         if isinstance(f, basestring):
-                return Context(compile_syntax(parse_source(default_loader.load_source(f))), **kwargs)
+                return Context(build_from_path(f), **kwargs)
         else:
-            return Context(compile_syntax(parse_source(f.read())), **kwargs)
+            return Context(build_from_source(f.read(), ''), **kwargs)
 
     def __contains__(self, key):
         return key in self._vars

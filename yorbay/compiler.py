@@ -569,10 +569,30 @@ class CompiledHash(CompiledExpr):
         return LazyHash(env, self._items, self._index_item, self._default)
 
 
+class CircularDependencyError(Exception):
+    pass
+
+
 class CompilerState(object):
     def __init__(self):
         self.entry_name = None
         self.local_names = None
+        self.entries = {}
+        self.import_uris = []
+        self.import_cstates = []
+        self._collecting = False
+
+    def collect(self, entries):
+        if self._collecting:
+            raise CircularDependencyError
+
+        self._collecting = True
+        try:
+            for icstate in self.import_cstates:
+                icstate.collect(entries)
+            entries.update(self.entries)
+        finally:
+            self._collecting = False
 
     def enter_macro(self, macro_name, local_names):
         assert self.entry_name is None
@@ -591,12 +611,17 @@ class CompilerState(object):
 
 def compile_syntax(l20n):
     cstate = CompilerState()
-    entries = {}
     for entry in l20n.entries:
         compiled_entry = compile_entry(cstate, entry)
         if compiled_entry is not None:
             k, v = compiled_entry
-            entries[k] = v
+            cstate.entries[k] = v
+    return cstate, cstate.import_uris, cstate.import_cstates
+
+
+def link(cstate):
+    entries = {}
+    cstate.collect(entries)
     return CompiledL20n(entries)
 
 
@@ -644,7 +669,7 @@ def compile_macro(cstate, macro):
 
 
 def compile_import_statement(cstate, node):
-    raise TypeError('Import statements are not currently supported')
+    cstate.import_uris.append(node.uri.content)
 
 
 entry_dispatch = {
