@@ -594,17 +594,18 @@ class CompilerState(object):
         finally:
             self._collecting = False
 
-    def enter_macro(self, macro_name, local_names):
+    def begin_macro(self, macro_name, local_names):
         assert self.entry_name is None
         self.entry_name = macro_name
         self.local_names = local_names
 
-    def enter_entity(self, entity_name):
+    def begin_entity(self, entity_name):
         assert self.entry_name is None
         self.entry_name = entity_name
         self.local_names = ()
 
-    def exit_entry(self):
+    def finish_entry(self, compiled_entry):
+        self.entries[self.entry_name] = compiled_entry
         self.entry_name = None
         self.local_names = None
 
@@ -612,10 +613,7 @@ class CompilerState(object):
 def compile_syntax(l20n):
     cstate = CompilerState()
     for entry in l20n.entries:
-        compiled_entry = compile_entry(cstate, entry)
-        if compiled_entry is not None:
-            k, v = compiled_entry
-            cstate.entries[k] = v
+        compile_entry(cstate, entry)
     return cstate, cstate.import_uris, cstate.import_cstates
 
 
@@ -626,7 +624,7 @@ def link(cstate):
 
 
 def compile_entity(cstate, entity):
-    cstate.enter_entity(entity.id.name)
+    cstate.begin_entity(entity.id.name)
 
     attrs = {}
     for attr in entity.attrs or ():
@@ -646,17 +644,12 @@ def compile_entity(cstate, entity):
     else:
         content = CompiledNull()
 
-    cstate.exit_entry()
-    return entity.id.name, CompiledEntity(
-        entity.id.name,
-        content,
-        attrs
-    )
+    cstate.finish_entry(CompiledEntity(entity.id.name, content, attrs))
 
 
 def compile_macro(cstate, macro):
     arg_names = [arg.id.name for arg in macro.args]
-    cstate.enter_macro(macro.id.name, arg_names)
+    cstate.begin_macro(macro.id.name, arg_names)
 
     has_tail, expr = compile_tail_expression(cstate, macro.expression)
     if has_tail:
@@ -664,8 +657,7 @@ def compile_macro(cstate, macro):
     else:
         compiled_macro = CompiledMacro(macro.id.name, arg_names, expr)
 
-    cstate.exit_entry()
-    return macro.id.name, compiled_macro
+    cstate.finish_entry(compiled_macro)
 
 
 def compile_import_statement(cstate, node):
