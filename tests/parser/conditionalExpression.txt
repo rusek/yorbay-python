@@ -1,0 +1,28 @@
+========================================== source(conditionalExpression, syntax=conditionalExpressionSyntax)
+<a() { 1 ? 2 : 3 }>
+========================================== syntax(conditionalExpressionSyntax, wrapper=exprWrapper)
+{
+    "type": "ConditionalExpression",
+    "test": {
+        "type": "Number",
+        "value": 1
+    },
+    "consequent": {
+        "type": "Number",
+        "value": 2
+    },
+    "alternate": {
+        "type": "Number",
+        "value": 3
+    }
+}
+========================================== wrapper(exprWrapper)
+{
+    "type": "L20n",
+    "entries": [{
+        "type": "Macro",
+        "id": {"type": "Identifier", "name": "a"},
+        "args": [],
+        "expression": "<HERE>"
+    }]
+}

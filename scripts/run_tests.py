@@ -7,10 +7,14 @@ import os
 import sys
 import traceback
 
-sys.path[0] = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+DIR = os.path.dirname(os.path.abspath(__file__))
+
+sys.path[:0] = [os.path.dirname(DIR), os.path.join(DIR, 'lib')]
 
 from yorbay.parser import parse_source, ParseError
 from yorbay.compiler import compile_syntax, link, ErrorWithSource
+
+from yorbay_json import syntax_to_json
 
 
 def tokenize_header(header):
@@ -130,7 +134,7 @@ class SourceSection(Section):
             print '{0} * running {1}...'.format(env.step(), self.name)
             syntax = parse_source(self._source)
             if expected_syntax is not None:
-                json_syntax = syntax.to_json()
+                json_syntax = syntax_to_json(syntax)
                 if json_syntax != expected_syntax:
                     print format_json_diff(expected_syntax, json_syntax),
                     raise Exception('Section ' + self.name + ': source is invalid, got ' + repr(json_syntax) +

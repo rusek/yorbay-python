@@ -4,13 +4,16 @@ import json
 import os
 import sys
 
-sys.path[0] = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+DIR = os.path.dirname(os.path.abspath(__file__))
+
+sys.path[:0] = [os.path.dirname(DIR), os.path.join(DIR, 'lib')]
 
 from yorbay.parser import parse_source
+from yorbay_json import syntax_to_json
 
 
 def main():
-    print json.dumps(parse_source(sys.stdin.read()).to_json(), indent=4)
+    print json.dumps(syntax_to_json(parse_source(sys.stdin.read())), indent=4)
 
 
 if __name__ == '__main__':
