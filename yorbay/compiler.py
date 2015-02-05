@@ -613,6 +613,7 @@ class CompilerState(object):
                 icstate.collect()
                 self.collected_entries.update(icstate.collected_entries)
             self.collected_entries.update(self.entries)
+            self._collected = True
         finally:
             self._collecting = False
 

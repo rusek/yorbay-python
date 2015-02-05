@@ -548,7 +548,7 @@ class Parser(object):
             elif self.token.type == 'eof':
                 raise self.error('Unclosed string')
             else:
-                raise RuntimeError('Invalid text token type: %s' % self.token.type)
+                raise AssertionError('Invalid text token type: %s' % self.token.type)
 
     def parse_item_list(self, callback, close_type):
         if self.try_skip_token(close_type):

@@ -56,6 +56,8 @@
 <a {key: 1}>
 ========================================== badSource(hashValueMayNotBeVariable)
 <a {key: $var}>
+========================================== badSource(hashItemsMustBeSeparatedByComma)
+<a {key1: "" key2: ""}>
 ========================================== wrapper(valueWrapper)
 {
     "type": "L20n",

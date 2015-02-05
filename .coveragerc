@@ -7,6 +7,4 @@ exclude_lines =
     pragma: no cover
 
     raise NotImplementedError
-
-    # Used for reporting errors that should never happen
-    raise RuntimeError
+    raise AssertionError

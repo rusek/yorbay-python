@@ -8,7 +8,8 @@ DIR = os.path.dirname(os.path.abspath(__file__))
 
 sys.path[0] = os.path.dirname(DIR)
 
-from yorbay.builder import build_from_path
+from yorbay.builder import build_from_path, build_from_standalone_source
+from yorbay.compiler import ErrorWithSource
 from yorbay.loader import PosixPathLoader
 
 
@@ -22,6 +23,10 @@ class DictLoader(PosixPathLoader):
 
 def resources_to_env(d):
     return build_from_path('main.l20n', loader=DictLoader(d)).make_env()
+
+
+def string_to_env(s):
+    return build_from_standalone_source(s).make_env()
 
 
 class TestImports(unittest.TestCase):
@@ -48,6 +53,7 @@ class TestImports(unittest.TestCase):
             ''',
             'first.l20n': '''
                 import("second.l20n")
+                import("third.l20n")
                 <b "B">
             ''',
             'second.l20n': '''
@@ -59,6 +65,50 @@ class TestImports(unittest.TestCase):
             '''
         })
         self.assertEqual(env.resolve_entity('all'), 'ABCD')
+
+
+class TestUserResolutionMethods(unittest.TestCase):
+    def setUp(self):
+        self.env = string_to_env("""
+            <entity "entityVal"
+                attr1: "attr1Val"
+                attr2: {*key: "attr2Val", other: "oops!"}
+            >
+            <onlyAttrs a:"">
+
+            <macro() { "oops!" }>
+        """)
+
+    def test_entity_resolution(self):
+        self.assertEqual(self.env.resolve_entity('entity'), 'entityVal')
+        self.assertEqual(self.env.resolve_entity('onlyAttrs'), None)
+        self.assertRaises(TypeError, self.env.resolve_entity, 'macro')
+        self.assertRaises(NameError, self.env.resolve_entity, 'noSuchEntity')
+
+    def test_attribute_resolution(self):
+        self.assertEqual(self.env.resolve_attribute('entity', 'attr1'), 'attr1Val')
+        self.assertEqual(self.env.resolve_attribute('entity', 'attr2'), 'attr2Val')
+        self.assertRaises(TypeError, self.env.resolve_attribute, 'macro', 'attr1')
+        self.assertRaises(NameError, self.env.resolve_attribute, 'entity', 'attr3')
+
+
+class TestErrorSource(unittest.TestCase):
+    def setUp(self):
+        self.env = string_to_env("""
+            <entity "{{ $noSuchVar }}!">
+        """)
+
+    def test_error_with_source(self):
+        error = None
+        try:
+            self.env.resolve_entity('entity')
+        except ErrorWithSource as error:
+            pass
+
+        self.assertTrue(error is not None)
+        self.assertEqual(error.source, '{{ $noSuchVar }}!')
+        self.assertTrue(str(error).endswith(str(error.cause)))
+
 
 if __name__ == '__main__':
     unittest.main()

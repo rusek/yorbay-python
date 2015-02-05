@@ -1,10 +1,13 @@
 ========================================== source(complexString)
 <abc "a{{ 'b' }}c">
 <a1c "a{{ 1 }}c">
+
+<nestedComplexStrings "a{{ "b{{ "c{{ "d" }}ef" }}g{{ "h" }}ij{{ "k" }}l" }}m">
 ========================================== check(complexStringChecks, syntax=complexString)
 {
     "abc": "abc",
-    "a1c": "a1c"
+    "a1c": "a1c",
+    "nestedComplexStrings": "abcdefghijklm"
 }
 ========================================== source(badComplexString)
 <boolean "{{ 1 == 1 }}">
