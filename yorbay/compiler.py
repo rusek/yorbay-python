@@ -393,9 +393,13 @@ class CompiledNamed(CompiledExpr):
 
 
 class CompiledEntryAccess(CompiledNamed):
+    def __init__(self, entries, name):
+        super(CompiledEntryAccess, self).__init__(name)
+        self._entries = entries
+
     def evaluate(self, env):
         try:
-            return env.parent.entries[self._name].bind(env.parent)
+            return self._entries[self._name].bind(env.parent)
         except KeyError:
             raise NameError('Entry "{0}" is not defined'.format(self._name))
 
@@ -578,19 +582,25 @@ class CompilerState(object):
         self.entry_name = None
         self.local_names = None
         self.entries = {}
+        self.collected_entries = {}
         self.import_uris = []
         self.import_cstates = []
         self._collecting = False
+        self._collected = False
 
-    def collect(self, entries):
+    def collect(self):
+        if self._collected:
+            return
+
         if self._collecting:
             raise CircularDependencyError
 
         self._collecting = True
         try:
             for icstate in self.import_cstates:
-                icstate.collect(entries)
-            entries.update(self.entries)
+                icstate.collect()
+                self.collected_entries.update(icstate.collected_entries)
+            self.collected_entries.update(self.entries)
         finally:
             self._collecting = False
 
@@ -618,9 +628,8 @@ def compile_syntax(l20n):
 
 
 def link(cstate):
-    entries = {}
-    cstate.collect(entries)
-    return CompiledL20n(entries)
+    cstate.collect()
+    return CompiledL20n(cstate.collected_entries)
 
 
 def compile_entity(cstate, entity):
@@ -719,7 +728,7 @@ def compile_variable(cstate, node):
 
 expression_dispatch = {
     'Number': lambda cstate, node: CompiledNumber(node.value),
-    'Identifier': lambda cstate, node: CompiledEntryAccess(node.name),
+    'Identifier': lambda cstate, node: CompiledEntryAccess(cstate.collected_entries, node.name),
     'Variable': compile_variable,
     'GlobalsExpression': lambda cstate, node: CompiledGlobalAccess(node.id.name),
     'ConditionalExpression': lambda cstate, node: CompiledConditional(
@@ -745,7 +754,7 @@ expression_dispatch = {
     ),
     'PropertyExpression': compile_property_expression,
     'AttributeExpression': compile_attribute_expression,
-    'ThisExpression': lambda cstate, node: CompiledEntryAccess(cstate.entry_name),
+    'ThisExpression': lambda cstate, node: CompiledEntryAccess(cstate.collected_entries, cstate.entry_name),
 }
 
 value_dispatch = {
