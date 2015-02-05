@@ -16,8 +16,8 @@ class Context(object):
         self._error_hook = error_hook
 
     @classmethod
-    def from_source(cls, source, **kwargs):
-        return Context(build_from_source(source, ''), **kwargs)
+    def from_string(cls, s, **kwargs):
+        return Context(build_from_source(s, ''), **kwargs)
 
     @classmethod
     def from_file(cls, f, **kwargs):

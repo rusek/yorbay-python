@@ -40,7 +40,7 @@ def raise_my_error(*args, **kwargs):
 
 class TestContext(unittest.TestCase):
     def setUp(self):
-        self.context = Context.from_source("""
+        self.context = Context.from_string("""
             <one 'eins'>
 
             <types {
@@ -151,7 +151,7 @@ class TestErrorHook(unittest.TestCase):
         self.error = None
 
     def test_error_hook_on_missing_entity(self):
-        tr = Context.from_source('', error_hook=self.store_error)
+        tr = Context.from_string('', error_hook=self.store_error)
         tr('noSuchEntity')
         self.assertTrue(isinstance(self.error, NameError))
 
@@ -181,7 +181,7 @@ class TestGlobals(unittest.TestCase):
         """
 
     def test_default_globals_are_accessible(self):
-        context = Context.from_source(self.source)
+        context = Context.from_string(self.source)
 
         hour_value = context('hour')
         self.assertTrue(hour_value.isdigit(), hour_value)
@@ -190,7 +190,7 @@ class TestGlobals(unittest.TestCase):
         self.assertTrue(os_value in ('linux', 'mac', 'win', 'unknown'), os_value)
 
     def test_extra_globals(self):
-        context = Context.from_source(self.source, extra_globals=dict(
+        context = Context.from_string(self.source, extra_globals=dict(
             my=MyGlobal('someval'),
             os=MyGlobal('bestosever'),
         ))
@@ -201,11 +201,11 @@ class TestGlobals(unittest.TestCase):
         self.assertEqual(context('my'), 'someval')
 
     def test_custom_globals(self):
-        context = Context.from_source(self.source, globals={})
+        context = Context.from_string(self.source, globals={})
         self.assertEqual(context('hour'), '{{ @hour }}')
 
     def test_custom_globals_with_extra_globals(self):
-        context = Context.from_source(
+        context = Context.from_string(
             self.source,
             globals=dict(hour=MyGlobal('-7')),
             extra_globals=dict(my=MyGlobal('someval')),
