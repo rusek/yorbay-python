@@ -68,9 +68,8 @@ def build_from_source(source, path, loader=None):
 
 
 def build_from_path(path, loader=None):
-    builder = Builder(loader)
-    goal = builder.get_goal(path)
-    builder.run()
+    with Builder(loader) as builder:
+        goal = builder.get_goal(path)
 
     return link(goal.cstate)
 
