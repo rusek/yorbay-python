@@ -11,13 +11,19 @@ class Goal(object):
 
 
 class Builder(object):
-    def __init__(self, loader):
+    def __init__(self, loader=None):
+        if loader is None:
+            loader = FsLoader()
+
         self._loader = loader
         self._all = []
         self._unprocessed = []
         self._cache = {}
 
     def get_goal(self, path):
+        return self._get_goal(self._loader.prepare_path(path))
+
+    def _get_goal(self, path):
         goal = self._cache.get(path)
         if goal is None:
             goal = Goal()
@@ -28,9 +34,16 @@ class Builder(object):
 
     def get_anonymous_goal(self, source, path):
         goal = Goal()
-        self._unprocessed.append((goal, source, path))
+        self._unprocessed.append((goal, source, self._loader.prepare_path(path)))
         self._all.append(goal)
         return goal
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        if exc_type is None:
+            self.run()
 
     def run(self):
         while self._unprocessed:
@@ -44,26 +57,19 @@ class Builder(object):
             source = self._loader.load_source(path)
 
         goal.cstate, import_paths, goal.out_import_cstates = compile_syntax(parse_source(source))
-        goal.import_goals = [self.get_goal(self._loader.prepare_import_path(path, ipath)) for ipath in import_paths]
+        goal.import_goals = [self._get_goal(self._loader.prepare_import_path(path, ipath)) for ipath in import_paths]
 
 
 def build_from_source(source, path, loader=None):
-    if loader is None:
-        loader = FsLoader()
-
-    builder = Builder(loader)
-    goal = builder.get_anonymous_goal(source, loader.prepare_path(path))
-    builder.run()
+    with Builder(loader) as builder:
+        goal = builder.get_anonymous_goal(source, path)
 
     return link(goal.cstate)
 
 
 def build_from_path(path, loader=None):
-    if loader is None:
-        loader = FsLoader()
-
     builder = Builder(loader)
-    goal = builder.get_goal(loader.prepare_path(path))
+    goal = builder.get_goal(path)
     builder.run()
 
     return link(goal.cstate)
