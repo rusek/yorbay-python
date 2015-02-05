@@ -11,6 +11,7 @@ DIR = os.path.dirname(os.path.abspath(__file__))
 sys.path[0] = os.path.dirname(DIR)
 
 from yorbay.context import Context
+from yorbay.globals import Global
 
 
 def delete_item(obj, item):
@@ -23,6 +24,14 @@ def set_item(obj, key, value):
 
 class MyError(Exception):
     pass
+
+
+class MyGlobal(Global):
+    def __init__(self, value):
+        self._value = value
+
+    def get(self):
+        return self._value
 
 
 def raise_my_error(*args, **kwargs):
@@ -161,6 +170,49 @@ class TestErrorHook(unittest.TestCase):
 
     def raise_error(self, exc_type, exc_value, traceback):
         raise exc_type, exc_value, traceback
+
+
+class TestGlobals(unittest.TestCase):
+    def setUp(self):
+        self.source = """
+            <hour "{{ @hour }}">
+            <os "{{ @os }}">
+            <my "{{ @my }}">
+        """
+
+    def test_default_globals_are_accessible(self):
+        context = Context.from_source(self.source)
+
+        hour_value = context('hour')
+        self.assertTrue(hour_value.isdigit(), hour_value)
+
+        os_value = context('os')
+        self.assertTrue(os_value in ('linux', 'mac', 'win', 'unknown'), os_value)
+
+    def test_extra_globals(self):
+        context = Context.from_source(self.source, extra_globals=dict(
+            my=MyGlobal('someval'),
+            os=MyGlobal('bestosever'),
+        ))
+
+        hour_value = context('hour')
+        self.assertTrue(hour_value.isdigit(), hour_value)
+        self.assertEqual(context('os'), 'bestosever')
+        self.assertEqual(context('my'), 'someval')
+
+    def test_custom_globals(self):
+        context = Context.from_source(self.source, globals={})
+        self.assertEqual(context('hour'), '{{ @hour }}')
+
+    def test_custom_globals_with_extra_globals(self):
+        context = Context.from_source(
+            self.source,
+            globals=dict(hour=MyGlobal('-7')),
+            extra_globals=dict(my=MyGlobal('someval')),
+        )
+        self.assertTrue(context('hour'), '-7')
+        self.assertTrue(context('my'), 'someval')
+
 
 if __name__ == '__main__':
     unittest.main()

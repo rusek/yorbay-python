@@ -2,12 +2,17 @@ import sys
 
 from .builder import build_from_path, build_from_source
 from .compiler import ErrorWithSource
+from .globals import default_globals
 
 
 class Context(object):
-    def __init__(self, l20n, error_hook=None):
+    def __init__(self, l20n, globals=None, extra_globals=None, error_hook=None):
         self._vars = {}
         self._l20n = l20n
+        self._globals = default_globals if globals is None else globals
+        if extra_globals:
+            self._globals = dict(self._globals)
+            self._globals.update(extra_globals)
         self._error_hook = error_hook
 
     @classmethod
@@ -57,7 +62,7 @@ class Context(object):
             vars.update(self._vars)
             vars.update(local_vars)
 
-        env = self._l20n.make_env(vars)
+        env = self._l20n.make_env(vars, self._globals)
         pos = query.find('::')
         try:
             if pos == -1:

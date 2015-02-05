@@ -41,15 +41,15 @@ class ErrorWithSource(Exception):
 
 
 class L20nEnv(object):
-    def __init__(self, entries, vars, globals, this):
-        self.entries = entries
+    def __init__(self, entries, vars, globals):
+        self._entries = entries
         self.vars = vars
         self.globals = globals
-        self.this = this
+        self.accessed_globals = {}
 
     def _get_entity(self, entity_name):
         try:
-            entry = self.entries[entity_name]
+            entry = self._entries[entity_name]
         except KeyError:
             raise NameError('Entity "{0}" is not defined'.format(entity_name))
 
@@ -80,10 +80,12 @@ class CompiledL20n(object):
         for entry in entries.itervalues():
             entry.populate_direct_queries(self.direct_queries)
 
-    def make_env(self, vars=None):
+    def make_env(self, vars=None, globals=None):
         if vars is None:
             vars = {}
-        return L20nEnv(self._entries, vars, {}, None)
+        if globals is None:
+            globals = {}
+        return L20nEnv(self._entries, vars, globals)
 
 
 class Resolvable(object):
@@ -423,9 +425,15 @@ class CompiledLocalAccess(CompiledExpr):
 class CompiledGlobalAccess(CompiledNamed):
     def evaluate(self, env):
         try:
-            return env.parent.globals[self._name]
+            return env.parent.accessed_globals[self._name]
         except KeyError:
-            raise NameError('Global "{0}" is not defined'.format(self._name))
+            try:
+                glob = env.parent.globals[self._name]
+            except KeyError:
+                raise NameError('Global "{0}" is not defined'.format(self._name))
+            glob = glob.get()
+            env.parent.accessed_globals[self._name] = glob
+            return glob
 
 
 class CompiledComplexString(CompiledExpr):
