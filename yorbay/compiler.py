@@ -178,8 +178,12 @@ class BoundTailMacro(BoundMacro):
             raise TypeError('Required {0} argument(s), got {1}'.format(len(self._macro._arg_names), len(args)))
         env = ExprEnv(self._lenv, args)
         val = Tail
+        rem_repeats = 1000  # default value of sys.getrecursionlimit() on my machine
         while val is Tail:
             val = self._macro._expr.evaluate(env)
+            rem_repeats -= 1
+            if not rem_repeats:
+                raise RuntimeError('Maximum tail recursion depth exceeded')
         return val
 
 

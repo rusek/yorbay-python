@@ -1,0 +1,16 @@
+========================================== source(infiniteMacroCall)
+<furry($n) { $n < 0 ? -1 : $n > 10000 ? furry($n - 10000) + 3 : furry($n + 1) - 7 }>
+
+<show "{{ furry(0) }}">
+========================================== check(infiniteMacroCallChecks, syntax=infiniteMacroCall)
+{
+    "show": false
+}
+========================================== source(infiniteTailCall)
+<furry($n) { $n < 0 ? -1 : $n > 10000 ? furry($n - 10000) : furry($n + 1) }>
+
+<show "{{ furry(0) }}">
+========================================== check(infiniteTailCallChecks, syntax=infiniteTailCall)
+{
+    "show": false
+}
