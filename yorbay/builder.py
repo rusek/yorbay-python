@@ -11,26 +11,27 @@ class Goal(object):
 
 
 class Builder(object):
-    def __init__(self, loader=None):
+    def __init__(self, loader=None, cache=None):
         if loader is None:
             loader = FsLoader()
 
         self._loader = loader
         self._all = []
         self._unprocessed = []
-        self._cache = {}
+        self._cache = {} if cache is None else cache
 
     def get_goal(self, path):
         return self._get_goal(self._loader.prepare_path(path))
 
     def _get_goal(self, path):
-        goal = self._cache.get(path)
-        if goal is None:
+        try:
+            return self._cache[path]
+        except KeyError:
             goal = Goal()
             self._cache[path] = goal
             self._unprocessed.append((goal, None, path))
             self._all.append(goal)
-        return goal
+            return goal
 
     def get_anonymous_goal(self, source, path):
         goal = Goal()
@@ -60,15 +61,15 @@ class Builder(object):
         goal.import_goals = [self._get_goal(self._loader.prepare_import_path(path, ipath)) for ipath in import_paths]
 
 
-def build_from_source(source, path, loader=None):
-    with Builder(loader) as builder:
+def build_from_source(source, path, loader=None, cache=None):
+    with Builder(loader, cache) as builder:
         goal = builder.get_anonymous_goal(source, path)
 
     return link(goal.cstate)
 
 
-def build_from_path(path, loader=None):
-    with Builder(loader) as builder:
+def build_from_path(path, loader=None, cache=None):
+    with Builder(loader, cache) as builder:
         goal = builder.get_goal(path)
 
     return link(goal.cstate)

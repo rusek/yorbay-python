@@ -73,6 +73,11 @@ class ExprEnv(object):
         self.locals = locals
 
 
+class LazyCompiledL20n(object):
+    def get(self):
+        raise NotImplementedError
+
+
 class CompiledL20n(object):
     def __init__(self, entries):
         self._entries = entries

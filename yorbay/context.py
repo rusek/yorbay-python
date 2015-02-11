@@ -1,14 +1,22 @@
 import sys
 
 from .builder import build_from_path, build_from_source
-from .compiler import ErrorWithSource
+from .compiler import ErrorWithSource, CompiledL20n, LazyCompiledL20n
+from .discovery import build_from_module_lazy
 from .globals import default_globals
 
 
 class Context(object):
-    def __init__(self, l20n, globals=None, extra_globals=None, error_hook=None):
+    def __init__(self, obj, globals=None, extra_globals=None, error_hook=None):
+        if isinstance(obj, CompiledL20n):
+            get_l20n = lambda: obj
+        elif isinstance(obj, LazyCompiledL20n):
+            get_l20n = obj.get
+        else:
+            raise TypeError('Invalid argument: {0!r}'.format(obj))
+
         self._vars = {}
-        self._l20n = l20n
+        self._get_l20n = get_l20n
         self._globals = default_globals if globals is None else globals
         if extra_globals:
             self._globals = dict(self._globals)
@@ -16,15 +24,19 @@ class Context(object):
         self._error_hook = error_hook
 
     @classmethod
-    def from_string(cls, s, **kwargs):
-        return Context(build_from_source(s, ''), **kwargs)
+    def from_string(cls, s, loader=None, **kwargs):
+        return cls(build_from_source(s, '', loader), **kwargs)
 
     @classmethod
-    def from_file(cls, f, **kwargs):
+    def from_file(cls, f, loader=None, **kwargs):
         if isinstance(f, basestring):
-                return Context(build_from_path(f), **kwargs)
+                return cls(build_from_path(f, loader), **kwargs)
         else:
-            return Context(build_from_source(f.read(), ''), **kwargs)
+            return cls(build_from_source(f.read(), '', loader), **kwargs)
+
+    @classmethod
+    def from_module(cls, name, **kwargs):
+        return cls(build_from_module_lazy(name), **kwargs)
 
     def __contains__(self, key):
         return key in self._vars
@@ -44,10 +56,12 @@ class Context(object):
         del self._vars[key]
 
     def __call__(self, query, **local_vars):
+        l20n = self._get_l20n()
+
         # Fast path: if the content of an entity or an attribute is a simple string, then
         # we do not have to create execution environment - we can use direct_queries mapping
         # instead
-        value = self._l20n.direct_queries.get(query)
+        value = l20n.direct_queries.get(query)
         if value is not None:
             return value
 
@@ -62,7 +76,7 @@ class Context(object):
             vars.update(self._vars)
             vars.update(local_vars)
 
-        env = self._l20n.make_env(vars, self._globals)
+        env = l20n.make_env(vars, self._globals)
         pos = query.find('::')
         try:
             if pos == -1:
