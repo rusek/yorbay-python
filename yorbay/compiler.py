@@ -2,6 +2,8 @@ from __future__ import division
 
 import sys
 
+from .exceptions import BuildError
+
 NULL = object()
 BOOL = object()
 NUMBER = object()
@@ -590,7 +592,11 @@ class CompiledHash(CompiledExpr):
         return LazyHash(env, self._items, self._index_item, self._default)
 
 
-class CircularDependencyError(Exception):
+class CompilerError(BuildError):
+    pass
+
+
+class CircularDependencyError(CompilerError):
     pass
 
 

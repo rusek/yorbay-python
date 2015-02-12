@@ -1,6 +1,11 @@
 from .compiler import compile_syntax, link
+from .exceptions import BuildError
 from .loader import FsLoader
 from .parser import parse_source
+
+
+class BuilderError(BuildError):
+    pass
 
 
 class Goal(object):
@@ -78,5 +83,5 @@ def build_from_path(path, loader=None, cache=None):
 def build_from_standalone_source(source):
     cstate, import_paths, _ = compile_syntax(parse_source(source))
     if import_paths:
-        raise ValueError('Encountered imports in standalone build')
+        raise BuilderError('Encountered imports in standalone build')
     return link(cstate)

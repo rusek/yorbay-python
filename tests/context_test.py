@@ -12,6 +12,7 @@ sys.path[0] = os.path.dirname(DIR)
 
 from yorbay.context import Context
 from yorbay.globals import Global
+from yorbay.loader import LoaderError
 
 
 def delete_item(obj, item):
@@ -128,7 +129,7 @@ class TestFromFile(unittest.TestCase):
         self.assertEqual(tr('thousand'), '1000')
 
     def test_invalid_path_raises_io_error(self):
-        self.assertRaises(IOError, Context.from_file, os.path.join(DIR, 'samples', 'no-such-file'))
+        self.assertRaises(LoaderError, Context.from_file, os.path.join(DIR, 'samples', 'no-such-file'))
 
     def test_load_by_open_file(self):
         with open(os.path.join(DIR, 'samples', 'numbers.l20n')) as f:

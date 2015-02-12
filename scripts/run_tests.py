@@ -11,7 +11,7 @@ DIR = os.path.dirname(os.path.abspath(__file__))
 
 sys.path[:0] = [os.path.dirname(DIR), os.path.join(DIR, 'lib')]
 
-from yorbay.parser import parse_source, ParseError
+from yorbay.parser import parse_source, ParserError
 from yorbay.compiler import compile_syntax, link, ErrorWithSource
 
 from yorbay_json import syntax_to_json
@@ -112,7 +112,7 @@ class BadSourceSection(Section):
         try:
             print '{0} * running {1}...'.format(env.step(), self.name)
             parse_source(self._source)
-        except ParseError:
+        except ParserError:
             pass
         else:
             raise Exception('Section ' + str(self.name) + ': Bad source parsed: ' + self._source)
@@ -140,7 +140,7 @@ class SourceSection(Section):
                     raise Exception('Section ' + self.name + ': source is invalid, got ' + repr(json_syntax) +
                                     ', should be ' + repr(expected_syntax))
             return syntax
-        except ParseError:
+        except ParserError:
             traceback.print_exc()
             raise Exception('Section ' + str(self.name) + ': source not parsed: ' + self._source)
 

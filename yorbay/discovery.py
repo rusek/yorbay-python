@@ -12,7 +12,7 @@ from .builder import build_from_path
 from .compiler import LazyCompiledL20n
 from .exceptions import BuildError
 from .lang import get_fallback_chain, get_fallback_chain_with_generation
-from .loader import PosixPathLoader
+from .loader import LoaderError, PosixPathLoader
 
 
 class DiscoveryError(BuildError):
@@ -142,4 +142,7 @@ class PkgResourceLoader(PosixPathLoader):
         return pkg_resources.resource_exists(self._module_name, posixpath.join(self._prefix, path))
 
     def load_source(self, path):
-        return codecs.decode(pkg_resources.resource_string(self._module_name, self._prefix + path), 'UTF-8')
+        try:
+            return codecs.decode(pkg_resources.resource_string(self._module_name, self._prefix + path), 'UTF-8')
+        except StandardError as e:
+            raise LoaderError(str(e))

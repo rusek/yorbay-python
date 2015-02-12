@@ -15,9 +15,9 @@ _token_re = re.compile(r'''
 _safe_str_chars_re = re.compile(r'''[^{'"\\]+''')
 
 
-class ParseError(Exception):
+class ParserError(Exception):
     def __init__(self, msg, pos):
-        super(ParseError, self).__init__('Line {0}: {1}'.format(pos.line, msg))
+        super(ParserError, self).__init__('Line {0}: {1}'.format(pos.line, msg))
         self.pos = pos
 
 
@@ -61,7 +61,7 @@ class Tokenizer(object):
 
         match = _token_re.match(self._s, self._pos)
         if not match:
-            raise ParseError('Unrecognized character: "{0}"'.format(self._s[self._pos]), pos=self.get_position())
+            raise ParserError('Unrecognized character: "{0}"'.format(self._s[self._pos]), pos=self.get_position())
 
         self._pos = match.end()
         if match.start(1) != -1:
@@ -72,7 +72,7 @@ class Tokenizer(object):
             if comment_end == -1:
                 self._pos = self._size
                 self._linescan()
-                raise ParseError('Unclosed comment', pos=self.get_position())
+                raise ParserError('Unclosed comment', pos=self.get_position())
             type, value = 'comment', self._s[self._pos: comment_end]
             self._pos = comment_end + 2  # skip '*/'
             self._linescan()
@@ -122,23 +122,23 @@ class Tokenizer(object):
 
     def _parse_escape(self):
         if self._size - self._pos < 2:
-            raise ParseError('Invalid escape', pos=self.get_position())
+            raise ParserError('Invalid escape', pos=self.get_position())
         c = self._s[self._pos + 1]
         if c == 'u':
             uarg = self._parse_u_escape_arg(2)
             if 0xd800 <= uarg <= 0xdbff:  # high surrogate
                 if self._s[self._pos + 6: self._pos + 8] != '\\u':
-                    raise ParseError('Invalid escape - missing low surrogate', pos=self.get_position())
+                    raise ParserError('Invalid escape - missing low surrogate', pos=self.get_position())
                 uarg2 = self._parse_u_escape_arg(8)
                 if 0xdc00 <= uarg2 <= 0xdfff:  # low surrogate
                     return unichr(0x10000 + (((uarg - 0xd800) << 10) | (uarg2 - 0xdc00))), 12
                 else:
-                    raise ParseError(
+                    raise ParserError(
                         'Invalid escape - not a low surrogate',
                         pos=syntax.Position(self._line, self._pos + 6 - self._line_start)
                     )
             elif 0xdc00 <= uarg <= 0xdfff:  # low surrogate
-                raise ParseError('Invalid escape - low surrogate', pos=self.get_position())
+                raise ParserError('Invalid escape - low surrogate', pos=self.get_position())
             else:
                 return unichr(uarg), 6
         else:
@@ -151,7 +151,7 @@ class Tokenizer(object):
                 return int(cs, 16)
             except ValueError:
                 pass
-        raise ParseError('Invalid escape', pos=self.get_position())
+        raise ParserError('Invalid escape', pos=self.get_position())
 
 
 def describe_token(token):
@@ -197,7 +197,7 @@ class Parser(object):
         self.ws_before = False
 
     def error(self, msg):
-        return ParseError(msg, pos=self.pos)
+        return ParserError(msg, pos=self.pos)
 
     def error_expected(self, desc):
         if self.token.type == 'comment':

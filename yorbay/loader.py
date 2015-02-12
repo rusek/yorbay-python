@@ -2,6 +2,12 @@ import codecs
 import os.path
 import posixpath
 
+from .exceptions import BuildError
+
+
+class LoaderError(BuildError):
+    pass
+
 
 class Loader(object):
     def prepare_path(self, path):
@@ -31,8 +37,13 @@ class FsLoader(Loader):
         return os.path.normpath(os.path.join(os.path.dirname(base), path))
 
     def load_source(self, path):
-        with codecs.open(path, encoding=self._encoding) as f:
-            return f.read()
+        try:
+            with codecs.open(path, encoding=self._encoding) as f:
+                return f.read()
+        except IOError as e:
+            raise LoaderError(str(e))
+        except UnicodeDecodeError as e:
+            raise LoaderError(str(e))
 
 
 class PosixPathLoader(Loader):
