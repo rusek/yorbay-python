@@ -3,6 +3,7 @@ from __future__ import division
 import sys
 
 from .exceptions import BuildError
+from . import syntax
 
 NULL = object()
 BOOL = object()
@@ -602,8 +603,6 @@ class CircularDependencyError(CompilerError):
 
 class CompilerState(object):
     def __init__(self):
-        self.entry_name = None
-        self.local_names = None
         self.entries = {}
         self.collected_entries = {}
         self.import_uris = []
@@ -628,26 +627,14 @@ class CompilerState(object):
         finally:
             self._collecting = False
 
-    def begin_macro(self, macro_name, local_names):
-        assert self.entry_name is None
-        self.entry_name = macro_name
-        self.local_names = local_names
-
-    def begin_entity(self, entity_name):
-        assert self.entry_name is None
-        self.entry_name = entity_name
-        self.local_names = ()
-
-    def finish_entry(self, compiled_entry):
-        self.entries[self.entry_name] = compiled_entry
-        self.entry_name = None
-        self.local_names = None
-
 
 def compile_syntax(l20n):
-    cstate = CompilerState()
+    compiler = Compiler()
+
     for entry in l20n.entries:
-        compile_entry(cstate, entry)
+        compiler.compile_entry(entry)
+
+    cstate = compiler.cstate
     return cstate, cstate.import_uris, cstate.import_cstates
 
 
@@ -656,198 +643,328 @@ def link(cstate):
     return CompiledL20n(cstate.collected_entries)
 
 
-def compile_entity(cstate, entity):
-    cstate.begin_entity(entity.id.name)
+class Handlers(object):
+    def __init__(self, handler_mapping=None, instance=None):
+        self._handler_mapping = {} if handler_mapping is None else handler_mapping
+        self._instance = instance
 
-    attrs = {}
-    for attr in entity.attrs or ():
-        if attr.index is None:
-            index = ()
+    def register(self, cls):
+        def decor(func):
+            self._handler_mapping[cls.__name__] = func.__name__
+            return func
+
+        return decor
+
+    def __get__(self, instance, owner):
+        if self._instance is not None:
+            raise AssertionError('Cannot call __get__ on bound handler')
+
+        if instance is None:
+            return self
         else:
-            index = [compile_expression(cstate, index_item) for index_item in attr.index]
-        attrs[attr.key.name] = compile_value(cstate, attr.value, index)
+            return Handlers(self._handler_mapping, instance)
 
-    if entity.value is not None:
-        if entity.index is None:
-            index = ()
+    def select(self, node):
+        if self._instance is None:
+            raise AssertionError('Cannot call __get__ on unbound handler')
+
+        attr = self._handler_mapping.get(node.__class__.__name__)
+        if attr is None:
+            return None
         else:
-            index = [compile_expression(cstate, index_item) for index_item in entity.index]
-
-        content = compile_value(cstate, entity.value, index)
-    else:
-        content = CompiledNull()
-
-    cstate.finish_entry(CompiledEntity(entity.id.name, content, attrs))
+            return getattr(self._instance, attr)
 
 
-def compile_macro(cstate, macro):
-    arg_names = [arg.id.name for arg in macro.args]
-    cstate.begin_macro(macro.id.name, arg_names)
+class Compiler(object):
+    def __init__(self):
+        self.entry_type = None
+        self.entry_name = None
+        self.local_names = None
+        self.cstate = CompilerState()
+        self.entries = self.cstate.entries
+        self.collected_entries = self.cstate.collected_entries
+        self.import_uris = self.cstate.import_uris
 
-    has_tail, expr = compile_tail_expression(cstate, macro.expression)
-    if has_tail:
-        compiled_macro = CompiledTailMacro(macro.id.name, arg_names, expr)
-    else:
-        compiled_macro = CompiledMacro(macro.id.name, arg_names, expr)
+    # Entry enter/exit routines
 
-    cstate.finish_entry(compiled_macro)
+    def begin_macro(self, macro_name, local_names):
+        assert self.entry_name is None
+        self.entry_type = 'macro'
+        self.entry_name = macro_name
+        self.local_names = local_names
 
+    def begin_entity(self, entity_name):
+        assert self.entry_name is None
+        self.entry_type = 'entity'
+        self.entry_name = entity_name
+        self.local_names = ()
 
-def compile_import_statement(cstate, node):
-    cstate.import_uris.append(node.uri.content)
+    def finish_entry(self, compiled_entry):
+        self.entries[self.entry_name] = compiled_entry
+        self.entry_name = None
+        self.local_names = None
 
+    # Entry handlers
 
-entry_dispatch = {
-    'Comment': lambda cstate, node: None,
-    'Entity': compile_entity,
-    'Macro': compile_macro,
-    'ImportStatement': compile_import_statement,
-}
+    entry_handlers = Handlers()
 
+    @entry_handlers.register(syntax.Comment)
+    def compile_comment(self, node):
+        pass
 
-def compile_entry(cstate, node):
-    return entry_dispatch[node.__class__.__name__](cstate, node)
+    @entry_handlers.register(syntax.Entity)
+    def compile_entity(self, node):
+        self.begin_entity(node.id.name)
 
+        attrs = self.compile_attributes(node.attrs)
+        content = self.compile_value_with_index(node.value, node.index)
+        entity = CompiledEntity(node.id.name, content, attrs)
 
-def compile_hash(cstate, node, index):
-    if index:
-        index_item, index_tail = index[0], index[1:]
-    else:
-        index_item, index_tail = None, ()
-    default = None
-    items = {}
-    for item_node in node.content:
-        value = compile_value(cstate, item_node.value, index_tail)
-        if item_node.default:
-            default = value
-        items[item_node.key.name] = value
-    return CompiledHash(items, index_item, default)
+        self.finish_entry(entity)
 
+    @entry_handlers.register(syntax.ImportStatement)
+    def compile_import_statement(self, node):
+        self.import_uris.append(node.uri.content)
 
-def compile_property_expression(cstate, node):
-    expr = compile_expression(cstate, node.expression)
-    if node.computed:
-        prop = compile_expression(cstate, node.property)
-    else:
-        prop = CompiledString(node.property.name)
-    return CompiledPropertyAccess(expr, prop)
+    @entry_handlers.register(syntax.Macro)
+    def compile_macro(self, node):
+        arg_names = [arg.id.name for arg in node.args]
+        self.begin_macro(node.id.name, arg_names)
 
+        has_tail, expr = self.compile_tail_expression(node.expression)
+        cls = CompiledTailMacro if has_tail else CompiledMacro
+        macro = cls(node.id.name, arg_names, expr)
 
-def compile_attribute_expression(cstate, node):
-    expr = compile_expression(cstate, node.expression)
-    if node.computed:
-        attr = compile_expression(cstate, node.attribute)
-    else:
-        attr = CompiledString(node.attribute.name)
-    return CompiledAttributeAccess(expr, attr)
+        self.finish_entry(macro)
 
+    def compile_entry(self, node):
+        handler = self.entry_handlers.select(node)
+        if handler is not None:
+            return handler(node)
 
-def compile_variable(cstate, node):
-    var_name = node.id.name
-    try:
-        return CompiledLocalAccess(cstate.local_names.index(var_name))
-    except ValueError:
-        return CompiledVariableAccess(var_name)
+        raise AssertionError('Invalid entry node: {0!r}'.format(node))
 
+    # Value handlers
 
-expression_dispatch = {
-    'Number': lambda cstate, node: CompiledNumber(node.value),
-    'Identifier': lambda cstate, node: CompiledEntryAccess(cstate.collected_entries, node.name),
-    'Variable': compile_variable,
-    'GlobalsExpression': lambda cstate, node: CompiledGlobalAccess(node.id.name),
-    'ConditionalExpression': lambda cstate, node: CompiledConditional(
-        compile_expression(cstate, node.test),
-        compile_expression(cstate, node.consequent),
-        compile_expression(cstate, node.alternate)
-    ),
-    'BinaryExpression': lambda cstate, node: binary_operators[node.operator.token](
-        compile_expression(cstate, node.left),
-        compile_expression(cstate, node.right)
-    ),
-    'LogicalExpression': lambda cstate, node: logical_operators[node.operator.token](
-        compile_expression(cstate, node.left),
-        compile_expression(cstate, node.right)
-    ),
-    'UnaryExpression': lambda cstate, node: unary_operators[node.operator.token](
-        compile_expression(cstate, node.argument)
-    ),
-    'ParenthesisExpression': lambda cstate, node: compile_expression(cstate, node.expression),
-    'CallExpression': lambda cstate, node: CompiledCall(
-        compile_expression(cstate, node.callee),
-        [compile_expression(cstate, arg) for arg in node.arguments]
-    ),
-    'PropertyExpression': compile_property_expression,
-    'AttributeExpression': compile_attribute_expression,
-    'ThisExpression': lambda cstate, node: CompiledEntryAccess(cstate.collected_entries, cstate.entry_name),
-}
+    value_handlers = Handlers()
 
-value_dispatch = {
-    'String': lambda cstate, node, index: CompiledString(node.content),
-    'ComplexString': lambda cstate, node, index: CompiledComplexString(
-        [compile_expression(cstate, item) for item in node.content], node.source),
-    'Hash': compile_hash,
-}
+    @value_handlers.register(syntax.ComplexString)
+    def compile_complex_string(self, node, index):
+        return CompiledComplexString(
+            [self.compile_expression(item) for item in node.content],
+            node.source
+        )
 
+    @value_handlers.register(syntax.Hash)
+    def compile_hash(self, node, index):
+        if index:
+            index_item, index_tail = index[0], index[1:]
+        else:
+            index_item, index_tail = None, ()
+        default = None
+        items = {}
+        for item_node in node.content:
+            value = self.compile_value(item_node.value, index_tail)
+            if item_node.default:
+                default = value
+            items[item_node.key.name] = value
+        return CompiledHash(items, index_item, default)
 
-def is_this_access(cstate, node):
-    node_type = node.__class__.__name__
-    if node_type == 'ThisExpression':
+    @value_handlers.register(syntax.String)
+    def compile_string(self, node, index):
+        return CompiledString(node.content)
+
+    def compile_value(self, node, index):
+        if node is None:
+            return CompiledNull()
+
+        handler = self.value_handlers.select(node)
+        if handler is not None:
+            return handler(node, index)
+
+        raise AssertionError('Not a value node: {0!r}'.format(node))
+
+    # Expression handlers
+
+    expression_handlers = Handlers()
+
+    @expression_handlers.register(syntax.AttributeExpression)
+    def compile_attribute_expression(self, node):
+        expr = self.compile_expression(node.expression)
+        if node.computed:
+            attr = self.compile_expression(node.attribute)
+        else:
+            attr = CompiledString(node.attribute.name)
+        return CompiledAttributeAccess(expr, attr)
+
+    binary_operator_classes = {
+        '==': CompiledEquals,
+        '!=': CompiledNotEqual,
+        '<': CompiledLessThan,
+        '<=': CompiledLessEqual,
+        '>': CompiledGreaterThan,
+        '>=': CompiledGreaterEqual,
+        '+': CompiledAdd,
+        '-': CompiledSubtract,
+        '*': CompiledMultiply,
+        '/': CompiledDivide,
+        '%': CompiledModulo,
+    }
+
+    @expression_handlers.register(syntax.BinaryExpression)
+    def compile_binary_expression(self, node):
+        return self.binary_operator_classes[node.operator.token](
+            self.compile_expression(node.left),
+            self.compile_expression(node.right)
+        )
+
+    @expression_handlers.register(syntax.CallExpression)
+    def compile_call_expression(self, node):
+        return CompiledCall(
+            self.compile_expression(node.callee),
+            [self.compile_expression(arg) for arg in node.arguments]
+        )
+
+    @expression_handlers.register(syntax.ConditionalExpression)
+    def compile_conditional_expression(self, node):
+        return CompiledConditional(
+            self.compile_expression(node.test),
+            self.compile_expression(node.consequent),
+            self.compile_expression(node.alternate)
+        )
+
+    @expression_handlers.register(syntax.GlobalsExpression)
+    def compile_globals_expression(self, node):
+        return CompiledGlobalAccess(node.id.name)
+
+    @expression_handlers.register(syntax.Identifier)
+    def compile_identifier(self, node):
+        return CompiledEntryAccess(self.collected_entries, node.name)
+
+    logical_operator_classes = {
+        '&&': CompiledAnd,
+        '||': CompiledOr,
+    }
+
+    @expression_handlers.register(syntax.LogicalExpression)
+    def compile_logical_expression(self, node):
+        return self.logical_operator_classes[node.operator.token](
+            self.compile_expression(node.left),
+            self.compile_expression(node.right)
+        )
+
+    @expression_handlers.register(syntax.Number)
+    def compile_number(self, node):
+        return CompiledNumber(node.value)
+
+    @expression_handlers.register(syntax.ParenthesisExpression)
+    def compile_parenthesis_expression(self, node):
+        return self.compile_expression(node.expression)
+
+    @expression_handlers.register(syntax.PropertyExpression)
+    def compile_property_expression(self, node):
+        expr = self.compile_expression(node.expression)
+        if node.computed:
+            prop = self.compile_expression(node.property)
+        else:
+            prop = CompiledString(node.property.name)
+        return CompiledPropertyAccess(expr, prop)
+
+    @expression_handlers.register(syntax.ThisExpression)
+    def compile_this_expression(self, node):
+        return CompiledEntryAccess(self.collected_entries, self.entry_name)
+
+    unary_operator_classes = {
+        '!': CompiledNot,
+        '-': CompiledNegative,
+        '+': CompiledPositive,
+    }
+
+    @expression_handlers.register(syntax.UnaryExpression)
+    def compile_unary_expression(self, node):
+        return self.unary_operator_classes[node.operator.token](
+            self.compile_expression(node.argument)
+        )
+
+    @expression_handlers.register(syntax.Variable)
+    def compile_variable(self, node):
+        var_name = node.id.name
+        try:
+            return CompiledLocalAccess(self.local_names.index(var_name))
+        except ValueError:
+            return CompiledVariableAccess(var_name)
+
+    def compile_expression(self, node):
+        handler = self.expression_handlers.select(node)
+        if handler is not None:
+            return handler(node)
+
+        handler = self.value_handlers.select(node)
+        if handler is not None:
+            return handler(node, ())
+
+        raise AssertionError('Not an expression node: {0!r}'.format(node))
+
+    # Current (this) entity access detection handlers
+
+    is_this_access_handlers = Handlers()
+
+    @is_this_access_handlers.register(syntax.ThisExpression)
+    def is_this_access_this_expression(self, node):
         return True
-    elif node_type == 'Identifier':
-        return cstate.entry_name == node.name
-    else:
+
+    @is_this_access_handlers.register(syntax.Identifier)
+    def is_this_access_identifier(self, node):
+        return self.entry_name == node.name
+
+    @is_this_access_handlers.register(syntax.ParenthesisExpression)
+    def is_this_access_parenthesis_expression(self, node):
+        return self.is_this_access(node)
+
+    def is_this_access(self, node):
+        handler = self.is_this_access_handlers.select(node)
+        if handler is not None:
+            return handler(node)
+
         return False
 
+    # Tail expression handlers
 
-def compile_tail_expression(cstate, node):
-    node_type = node.__class__.__name__
-    if node_type == 'ConditionalExpression':
-        test = compile_expression(cstate, node.test)
-        consequent_has_tail, consequent = compile_tail_expression(cstate, node.consequent)
-        alternate_has_tail, alternate = compile_tail_expression(cstate, node.alternate)
+    tail_expression_handlers = Handlers()
+
+    @tail_expression_handlers.register(syntax.CallExpression)
+    def compile_tail_call_expression(self, node):
+        if self.is_this_access(node.callee) and len(node.arguments) == len(self.local_names):
+            return True, CompiledTailCall([self.compile_expression(arg) for arg in node.arguments])
+        else:
+            return False, self.compile_expression(node)
+
+    @tail_expression_handlers.register(syntax.ConditionalExpression)
+    def compile_tail_conditional_expression(self, node):
+        test = self.compile_expression(node.test)
+        consequent_has_tail, consequent = self.compile_tail_expression(node.consequent)
+        alternate_has_tail, alternate = self.compile_tail_expression(node.alternate)
         return consequent_has_tail or alternate_has_tail, CompiledConditional(test, consequent, alternate)
-    elif node_type == 'CallExpression':
-        if is_this_access(cstate, node.callee) and len(node.arguments) == len(cstate.local_names):
-            return True, CompiledTailCall([compile_expression(cstate, arg) for arg in node.arguments])
 
-    return False, compile_expression(cstate, node)
+    @tail_expression_handlers.register(syntax.ParenthesisExpression)
+    def compile_tail_parenthesis_expression(self, node):
+        return self.compile_tail_expression(node.expression)
 
+    def compile_tail_expression(self, node):
+        handler = self.tail_expression_handlers.select(node)
+        if handler is not None:
+            return handler(node)
 
-def compile_expression(cstate, node):
-    name = node.__class__.__name__
-    if name in expression_dispatch:
-        return expression_dispatch[name](cstate, node)
-    else:
-        return value_dispatch[name](cstate, node, ())
+        return False, self.compile_expression(node)
 
+    # Helper methods
 
-def compile_value(cstate, node, index):
-    return value_dispatch[node.__class__.__name__](cstate, node, index)
+    def compile_value_with_index(self, node, index_nodes):
+        index = [self.compile_expression(index_item_node) for index_item_node in index_nodes or ()]
+        return self.compile_value(node, index)
 
-
-binary_operators = {
-    '==': CompiledEquals,
-    '!=': CompiledNotEqual,
-    '<': CompiledLessThan,
-    '<=': CompiledLessEqual,
-    '>': CompiledGreaterThan,
-    '>=': CompiledGreaterEqual,
-    '+': CompiledAdd,
-    '-': CompiledSubtract,
-    '*': CompiledMultiply,
-    '/': CompiledDivide,
-    '%': CompiledModulo,
-}
-
-
-logical_operators = {
-    '&&': CompiledAnd,
-    '||': CompiledOr,
-}
-
-
-unary_operators = {
-    '!': CompiledNot,
-    '-': CompiledNegative,
-    '+': CompiledPositive,
-}
+    def compile_attributes(self, nodes):
+        attrs = {}
+        for node in nodes or ():
+            attrs[node.key.name] = self.compile_value_with_index(node.value, node.index)
+        return attrs
