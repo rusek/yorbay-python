@@ -67,9 +67,10 @@ def build_from_module(name, langs=None):
 
 
 class LazyBuilder(LazyCompiledL20n):
-    def __init__(self, loader):
+    def __init__(self, loader, debug):
         self._loader = loader
         self._cache = None, None
+        self._debug = debug
 
     def get(self):
         langs, gen = get_fallback_chain_with_generation()
@@ -82,18 +83,18 @@ class LazyBuilder(LazyCompiledL20n):
         if path is None:
             raise DiscoveryError('Could not find translations, tried languages: {0}'.format(langs))
 
-        l20n = build_from_path(path, self._loader, cache=self._loader.cache)
+        l20n = build_from_path(path, self._loader, cache=self._loader.cache, debug=self._debug)
         self._cache = l20n, gen
 
         return l20n
 
 
-def build_from_module_lazy(name):
+def build_from_module_lazy(name, debug=False):
     loader = get_discovery_loader(name)
     if loader is None:
         raise DiscoveryError('Could not find suitable discovery loader for {0}'.format(name))
 
-    return LazyBuilder(loader)
+    return LazyBuilder(loader, debug=debug)
 
 
 class PkgResourcesDiscoverer(object):

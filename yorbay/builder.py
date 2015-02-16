@@ -16,7 +16,7 @@ class Goal(object):
 
 
 class Builder(object):
-    def __init__(self, loader=None, cache=None):
+    def __init__(self, loader=None, cache=None, debug=False):
         if loader is None:
             loader = FsLoader()
 
@@ -24,6 +24,7 @@ class Builder(object):
         self._all = []
         self._unprocessed = []
         self._cache = {} if cache is None else cache
+        self._debug = debug
 
     def get_goal(self, path):
         return self._get_goal(self._loader.prepare_path(path))
@@ -62,26 +63,29 @@ class Builder(object):
         if source is None:
             source = self._loader.load_source(path)
 
-        goal.cstate, import_paths, goal.out_import_cstates = compile_syntax(parse_source(source))
+        goal.cstate, import_paths, goal.out_import_cstates = compile_syntax(
+            parse_source(source, path=path, debug=self._debug),
+            debug=self._debug
+        )
         goal.import_goals = [self._get_goal(self._loader.prepare_import_path(path, ipath)) for ipath in import_paths]
 
 
-def build_from_source(source, path, loader=None, cache=None):
-    with Builder(loader, cache) as builder:
+def build_from_source(source, path, loader=None, cache=None, debug=False):
+    with Builder(loader, cache, debug) as builder:
         goal = builder.get_anonymous_goal(source, path)
 
     return link(goal.cstate)
 
 
-def build_from_path(path, loader=None, cache=None):
-    with Builder(loader, cache) as builder:
+def build_from_path(path, loader=None, cache=None, debug=False):
+    with Builder(loader, cache, debug) as builder:
         goal = builder.get_goal(path)
 
     return link(goal.cstate)
 
 
-def build_from_standalone_source(source):
-    cstate, import_paths, _ = compile_syntax(parse_source(source))
+def build_from_standalone_source(source, path=None, debug=False):
+    cstate, import_paths, _ = compile_syntax(parse_source(source, path=path, debug=debug), debug=debug)
     if import_paths:
         raise BuilderError('Encountered imports in standalone build')
     return link(cstate)

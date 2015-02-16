@@ -111,7 +111,7 @@ class BadSourceSection(Section):
     def run(self, env):
         try:
             print '{0} * running {1}...'.format(env.step(), self.name)
-            parse_source(self._source)
+            parse_source(self._source, debug=use_debug)
         except ParserError:
             pass
         else:
@@ -132,7 +132,7 @@ class SourceSection(Section):
                 expected_syntax = env.run_section(self._syntax_name, type=SyntaxSection)
 
             print '{0} * running {1}...'.format(env.step(), self.name)
-            syntax = parse_source(self._source)
+            syntax = parse_source(self._source, debug=use_debug)
             if expected_syntax is not None:
                 json_syntax = syntax_to_json(syntax)
                 if json_syntax != expected_syntax:
@@ -213,7 +213,7 @@ class CheckSection(Section):
             context = env.run_section(self._context_name, type=ContextSection)
 
         print '{0} * running {1}...'.format(env.step(), self.name)
-        cstate, import_paths, out_import_cstates = compile_syntax(syntax)
+        cstate, import_paths, out_import_cstates = compile_syntax(syntax, debug=use_debug)
         if import_paths:
             raise Exception('Unexpected import paths')
         compiled_l20n = link(cstate)
@@ -483,8 +483,16 @@ def run_file(test_def, step_counter):
         env.run_sections()
 
 
+use_debug = False
+
+
 def main():
     test_defs = sys.argv[1:]
+    if test_defs and test_defs[0] == '--use-debug':
+        global use_debug
+        use_debug = True
+        test_defs.pop(0)
+
     if test_defs:
         step_counter = StepCounter()
         for test_def in test_defs:

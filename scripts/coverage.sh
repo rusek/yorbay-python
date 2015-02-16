@@ -8,6 +8,7 @@ export COVERAGE_FILE="$( pwd )/.coverage"
 coverage erase
 
 coverage run ./scripts/run_tests.py ./tests/*/*.txt
+coverage run ./scripts/run_tests.py --use-debug ./tests/*/*.txt
 
 for SCRIPT_FILE in ./tests/*_test.py
 do

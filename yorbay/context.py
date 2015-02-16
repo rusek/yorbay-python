@@ -24,15 +24,15 @@ class Context(object):
         self._error_hook = error_hook
 
     @classmethod
-    def from_string(cls, s, loader=None, **kwargs):
-        return cls(build_from_source(s, '', loader), **kwargs)
+    def from_string(cls, s, loader=None, debug=False, **kwargs):
+        return cls(build_from_source(s, '', loader, debug=debug), **kwargs)
 
     @classmethod
-    def from_file(cls, f, loader=None, **kwargs):
+    def from_file(cls, f, loader=None, debug=False, **kwargs):
         if isinstance(f, basestring):
-                return cls(build_from_path(f, loader), **kwargs)
+                return cls(build_from_path(f, loader, debug=debug), **kwargs)
         else:
-            return cls(build_from_source(f.read(), '', loader), **kwargs)
+            return cls(build_from_source(f.read(), '', loader, debug=debug), **kwargs)
 
     @classmethod
     def from_module(cls, name, **kwargs):

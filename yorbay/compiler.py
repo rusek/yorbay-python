@@ -628,8 +628,12 @@ class CompilerState(object):
             self._collecting = False
 
 
-def compile_syntax(l20n):
-    compiler = Compiler()
+def compile_syntax(l20n, debug=False):
+    if debug:
+        from .debug.compiler import DebugCompiler
+        compiler = DebugCompiler()
+    else:
+        compiler = Compiler()
 
     for entry in l20n.entries:
         compiler.compile_entry(entry)
@@ -697,7 +701,7 @@ class Compiler(object):
         assert self.entry_name is None
         self.entry_type = 'entity'
         self.entry_name = entity_name
-        self.local_names = ()
+        self.local_names = []
 
     def finish_entry(self, compiled_entry):
         self.entries[self.entry_name] = compiled_entry
