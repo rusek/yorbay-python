@@ -1,5 +1,9 @@
-import coverage
-coverage.process_startup()
+try:
+    import coverage
+except ImportError:
+    pass
+else:
+    coverage.process_startup()
 
 import os
 import sys

@@ -151,6 +151,12 @@ class DebugHook(object):
 
     def __exit__(self, exc_type, exc_val, exc_tb):
         if exc_val is not None:
+            if isinstance(exc_val, basestring):
+                exc_val = exc_type(exc_val)
+                throw = True
+            else:
+                throw = False
+
             tb = attach_stack(exc_val)
             if tb and tb[-1] is None:
                 if self._barrier:
@@ -159,6 +165,9 @@ class DebugHook(object):
                 tb.append(Frame(self.entry_type, self.entry_name, self.pos))
                 if not self._barrier:
                     tb.append(None)
+
+            if throw:
+                raise exc_type, exc_val, exc_tb
 
 
 class DebugCompiler(Compiler):

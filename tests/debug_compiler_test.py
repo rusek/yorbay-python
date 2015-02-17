@@ -61,7 +61,7 @@ class TestStackTrace(unittest.TestCase):
             '  1 }}">'
         )
         exc = self.resolve_exc('show')
-        self.assertTrue(isinstance(exc, ArithmeticError))
+        self.assertTrue(isinstance(exc, ArithmeticError), msg=(type(exc), exc))
         stack = get_stack(exc)
         self.assertEqual(len(stack), 1)
         self.assertFrameEqual(stack[0], 'entity', 'show', 2, 4)
