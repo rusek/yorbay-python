@@ -64,7 +64,7 @@ class Builder(object):
             source = self._loader.load_source(path)
 
         goal.cstate, import_paths, goal.out_import_cstates = compile_syntax(
-            parse_source(source, path=path, debug=self._debug),
+            parse_source(source, path=self._loader.format_path(path), debug=self._debug),
             debug=self._debug
         )
         goal.import_goals = [self._get_goal(self._loader.prepare_import_path(path, ipath)) for ipath in import_paths]
