@@ -1,6 +1,5 @@
 import codecs
 import os.path
-import posixpath
 
 from .exceptions import BuildError
 
@@ -81,12 +80,48 @@ class FsLoader(Loader):
         return path
 
 
-class PosixPathLoader(Loader):
+class SimpleLoader(Loader):
+    """
+    Base class for loaders that use URI-like paths. Such paths are suitable for use e.g. with
+    pkgutil.get_data function.
+
+    Path components are separated by '/'. Prepared paths never start with '/' and do not contain
+    '.' and '..'. Multiple successive slashes are compressed to a single slash, which is not the
+    case for URI paths. Prepared path may be empty. It can also contain a trailing slash.
+    """
+
+    def __init__(self, base=''):
+        self._base = resolve_simple_path('', base)
+
     def prepare_path(self, path):
-        return posixpath.normpath(posixpath.join('/', path))
+        return resolve_simple_path(self._base, path)
 
     def prepare_import_path(self, base, path):
-        return posixpath.normpath(posixpath.join(posixpath.dirname(base), path))
+        return resolve_simple_path(base, path)
 
     def format_path(self, path):
         return path
+
+
+def resolve_simple_path(base, path):
+    if not path:
+        return base
+
+    if path.startswith('/'):
+        segs = path.split('/')
+    else:
+        segs = base.split('/')[:-1] + path.split('/')
+
+    out = []
+
+    for seg in segs:
+        if seg == '..':
+            if out:
+                out.pop()
+        elif seg not in ('', '.'):
+            out.append(seg)
+
+    if segs[-1] in ('.', '', '..'):
+        out.append('')
+
+    return '/'.join(out)

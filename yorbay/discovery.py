@@ -2,7 +2,6 @@ import codecs
 import collections
 import os
 import pkgutil
-import posixpath
 import sys
 import zipimport
 
@@ -12,7 +11,7 @@ from .builder import build_from_path
 from .compiler import LazyCompiledL20n
 from .exceptions import BuildError
 from .lang import get_fallback_chain, get_fallback_chain_with_generation
-from .loader import LoaderError, PosixPathLoader
+from .loader import SimpleLoader, LoaderError
 
 
 class DiscoveryError(BuildError):
@@ -133,14 +132,18 @@ def get_resource_key(module_name):
 _builder_cache = collections.defaultdict(dict)
 
 
-class PkgResourceLoader(PosixPathLoader):
+class PkgResourceLoader(SimpleLoader):
     def __init__(self, module_name, prefix):
+        super(PkgResourceLoader, self).__init__()
+        if not prefix.endswith('/'):
+            prefix += '/'
+
         self._module_name = module_name
         self._prefix = prefix
         self.cache = _builder_cache[(get_resource_key(module_name), prefix)]
 
     def exists(self, path):
-        return pkg_resources.resource_exists(self._module_name, posixpath.join(self._prefix, path))
+        return pkg_resources.resource_exists(self._module_name, self._prefix + path)
 
     def load_source(self, path):
         try:

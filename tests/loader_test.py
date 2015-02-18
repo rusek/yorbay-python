@@ -8,7 +8,7 @@ DIR = os.path.dirname(os.path.abspath(__file__))
 
 sys.path[0] = os.path.dirname(DIR)
 
-from yorbay.loader import FsLoader, PosixPathLoader
+from yorbay.loader import FsLoader, SimpleLoader, resolve_simple_path
 
 
 class TestFsLoader(unittest.TestCase):
@@ -53,21 +53,36 @@ class TestFsLoader(unittest.TestCase):
         self.assertEqual(prep_path2, os.path.join(os.getcwd(), self.path2))
 
 
-class TestPosixPathLoader(unittest.TestCase):
+class TestSimplePath(unittest.TestCase):
     def setUp(self):
-        self.loader = PosixPathLoader()
+        self.loader = SimpleLoader()
 
     def test_prepare_path(self):
-        self.assertEqual(self.loader.prepare_path('aaa'), '/aaa')
-        self.assertEqual(self.loader.prepare_path('/xyz'), '/xyz')
-        self.assertEqual(self.loader.prepare_path('/a/b/../c/./d'), '/a/c/d')
-        self.assertEqual(self.loader.prepare_path('..'), '/')
+        self.assertEqual(self.loader.prepare_path('aaa'), 'aaa')
+        self.assertEqual(self.loader.prepare_path('/xyz'), 'xyz')
+        self.assertEqual(self.loader.prepare_path('/a/b/../c/./d'), 'a/c/d')
+        self.assertEqual(self.loader.prepare_path('..'), '')
 
     def test_prepare_import_path(self):
-        self.assertEqual(self.loader.prepare_import_path('/f1.l20n', 'f2.l20n'), '/f2.l20n')
-        self.assertEqual(self.loader.prepare_import_path('/a/f1.l20n', '../f2.l20n'), '/f2.l20n')
-        self.assertEqual(self.loader.prepare_import_path('/a/f1.l20n', '../../f2.l20n'), '/f2.l20n')
-        self.assertEqual(self.loader.prepare_import_path('/a/f1.l20n', 'b/f2.l20n'), '/a/b/f2.l20n')
+        self.assertEqual(self.loader.prepare_import_path('/f1.l20n', 'f2.l20n'), 'f2.l20n')
+        self.assertEqual(self.loader.prepare_import_path('/a/f1.l20n', '../f2.l20n'), 'f2.l20n')
+        self.assertEqual(self.loader.prepare_import_path('/a/f1.l20n', '../../f2.l20n'), 'f2.l20n')
+        self.assertEqual(self.loader.prepare_import_path('/a/f1.l20n', 'b/f2.l20n'), 'a/b/f2.l20n')
+
+    def test_resolve_simple_path(self):
+        self.assertEqual(resolve_simple_path('abc', 'def'), 'def')
+        self.assertEqual(resolve_simple_path('abc/def', 'ghi'), 'abc/ghi')
+        self.assertEqual(resolve_simple_path('abc/def', '.'), 'abc/')
+        self.assertEqual(resolve_simple_path('abc/def/', '.'), 'abc/def/')
+        self.assertEqual(resolve_simple_path('abc/def', '..'), '')
+        self.assertEqual(resolve_simple_path('abc/def/ghi', '..'), 'abc/')
+        self.assertEqual(resolve_simple_path('abc/def/', ''), 'abc/def/')
+        self.assertEqual(resolve_simple_path('abc/def/', 'ghi'), 'abc/def/ghi')
+        self.assertEqual(resolve_simple_path('abc/def/', 'ghi/'), 'abc/def/ghi/')
+        self.assertEqual(resolve_simple_path('abc/def/', '../ghi'), 'abc/ghi')
+        self.assertEqual(resolve_simple_path('abc/def/', 'ghi///'), 'abc/def/ghi/')
+        self.assertEqual(resolve_simple_path('abc', ''), 'abc')
+        self.assertEqual(resolve_simple_path('abc', '/'), '')
 
 
 if __name__ == '__main__':

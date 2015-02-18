@@ -10,15 +10,19 @@ sys.path[0] = os.path.dirname(DIR)
 
 from yorbay.builder import build_from_path, build_from_standalone_source
 from yorbay.compiler import ErrorWithSource
-from yorbay.loader import PosixPathLoader
+from yorbay.loader import SimpleLoader, LoaderError
 
 
-class DictLoader(PosixPathLoader):
+class DictLoader(SimpleLoader):
     def __init__(self, d):
+        super(DictLoader, self).__init__()
         self._d = d
 
     def load_source(self, path):
-        return self._d[path[1:]]
+        try:
+            return self._d[path]
+        except KeyError:
+            raise LoaderError('Not found: {0}'.format(path))
 
 
 def resources_to_env(d):
