@@ -205,8 +205,8 @@ class DebugCompiler(Compiler):
         except ValueError:
             return DebugCompiledVariableAccess(var_name, self.local_names)
 
-    def compile_value(self, node, index):
-        return self.wrap_compiled_expr(super(DebugCompiler, self).compile_value(node, index), node)
+    def compile_value(self, node, index, depth):
+        return self.wrap_compiled_expr(super(DebugCompiler, self).compile_value(node, index, depth), node)
 
     def compile_expression(self, node):
         return self.wrap_compiled_expr(super(DebugCompiler, self).compile_expression(node), node)

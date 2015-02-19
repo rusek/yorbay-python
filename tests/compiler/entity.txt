@@ -79,3 +79,11 @@
     "hashOne": "1st",
     "hashFive": false
 }
+========================================== source(index)
+<checkMultipleIndexItems['a', 'b', 'c'] {
+    a: {b: {c: "ok", *_: "cfail"}, *_: "bfail"}, *_: "afail"
+}>
+========================================== check(indexChecks, syntax=index)
+{
+    "checkMultipleIndexItems": "ok"
+}

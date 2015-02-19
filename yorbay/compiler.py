@@ -753,38 +753,35 @@ class Compiler(object):
     value_handlers = Handlers()
 
     @value_handlers.register(syntax.ComplexString)
-    def compile_complex_string(self, node, index):
+    def compile_complex_string(self, node, index, depth):
         return CompiledComplexString(
             [self.compile_expression(item) for item in node.content],
             node.source
         )
 
     @value_handlers.register(syntax.Hash)
-    def compile_hash(self, node, index):
-        if index:
-            index_item, index_tail = index[0], index[1:]
-        else:
-            index_item, index_tail = None, ()
+    def compile_hash(self, node, index, depth):
+        index_item = index[depth] if depth < len(index) else None
         default = None
         items = {}
         for item_node in node.content:
-            value = self.compile_value(item_node.value, index_tail)
+            value = self.compile_value(item_node.value, index, depth + 1)
             if item_node.default:
                 default = value
             items[item_node.key.name] = value
         return CompiledHash(items, index_item, default)
 
     @value_handlers.register(syntax.String)
-    def compile_string(self, node, index):
+    def compile_string(self, node, index, depth):
         return CompiledString(node.content)
 
-    def compile_value(self, node, index):
+    def compile_value(self, node, index, depth):
         if node is None:
             return CompiledNull()
 
         handler = self.value_handlers.select(node)
         if handler is not None:
-            return handler(node, index)
+            return handler(node, index, depth)
 
         raise AssertionError('Not a value node: {0!r}'.format(node))
 
@@ -905,7 +902,7 @@ class Compiler(object):
 
         handler = self.value_handlers.select(node)
         if handler is not None:
-            return handler(node, ())
+            return handler(node, (), 0)
 
         raise AssertionError('Not an expression node: {0!r}'.format(node))
 
@@ -965,7 +962,7 @@ class Compiler(object):
 
     def compile_value_with_index(self, node, index_nodes):
         index = [self.compile_expression(index_item_node) for index_item_node in index_nodes or ()]
-        return self.compile_value(node, index)
+        return self.compile_value(node, index, 0)
 
     def compile_attributes(self, nodes):
         attrs = {}
