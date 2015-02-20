@@ -96,6 +96,19 @@ class TestUserResolutionMethods(unittest.TestCase):
         self.assertRaises(NameError, self.env.resolve_attribute, 'entity', 'attr3')
 
 
+class TestHashLookupError(unittest.TestCase):
+    def test_hash_lookup(self):
+        env = string_to_env('<entity["a"] {b: "b"}>')
+        try:
+            env.resolve_entity('entity')
+        except Exception as error:
+            self.assertTrue(isinstance(error, KeyError), msg=type(error))
+            for msg in [str(error), error.message]:
+                self.assertTrue(msg.startswith('Hash key lookup failed'), msg=repr(msg))
+        else:
+            self.fail()
+
+
 class TestErrorSource(unittest.TestCase):
     def setUp(self):
         self.env = string_to_env("""

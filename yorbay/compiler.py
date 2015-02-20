@@ -548,6 +548,15 @@ class CompiledAttributeAccess(CompiledExpr):
         return expr_val.get_attribute(attr_val)
 
 
+class HashError(KeyError):
+    def __init__(self, message):
+        super(HashError, self).__init__(message)
+
+    def __str__(self):
+        # KeyError.__str__ adds quotes around the message
+        return self.message
+
+
 class LazyHash(Resolvable):
     def __init__(self, env, items, index_item, default):
         self._env = ExprEnv(env.parent, env.locals)
@@ -578,7 +587,7 @@ class LazyHash(Resolvable):
         if self._default is not None:
             return self._default.evaluate(self._env)
 
-        raise KeyError('Hash key lookup failed')
+        raise HashError('Hash key lookup failed')
 
 
 class CompiledHash(CompiledExpr):
