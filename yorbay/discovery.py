@@ -1,9 +1,6 @@
 import codecs
 import collections
-import os
 import pkgutil
-import sys
-import zipimport
 
 pkg_resources = None  # lazily loaded, as it is not a part of standard library
 
@@ -11,24 +8,29 @@ from .builder import build_from_path
 from .compiler import LazyCompiledL20n
 from .exceptions import BuildError
 from .lang import get_fallback_chain, get_fallback_chain_with_generation
-from .loader import SimpleLoader, LoaderError
+from .loader import SimpleLoader, LoaderError, resolve_simple_path
 
 
 class DiscoveryError(BuildError):
     pass
 
 
-def get_module(module_name):
-    try:
-        return sys.modules[module_name]
-    except KeyError:
-        __import__(module_name)
-        return sys.modules[module_name]
+def is_package(module_name):
+    module_loader = pkgutil.get_loader(module_name)
+    if module_loader is None:
+        raise DiscoveryError('Could not find or import module {0}'.format(module_name))
+    if not hasattr(module_loader, 'is_package'):
+        raise DiscoveryError('Module loader does not implement is_package method')
+
+    return module_loader.is_package(module_name)
 
 
 def get_discovery_loader(module_name):
     path = 'locale'
     discoverer = PkgResourcesDiscoverer()
+
+    if not is_package(module_name):
+        module_name = module_name.rsplit('.')[0]
 
     while True:
         discovery_loader = discoverer.get_discovery_loader(module_name, path)
@@ -109,38 +111,17 @@ class PkgResourcesDiscoverer(object):
             return PkgResourceLoader(module_name, path)
 
 
-def get_resource_key(module_name):
-    """
-    Return a key (hashable object) that uniquely identifies resources linked to the specified
-    module. For example, modules coming from a single package may share the same resources,
-    so their resource keys should be equal.
-    """
-    module = get_module(module_name)
-    module_loader = getattr(module, '__loader__', None)
-
-    # These loaders provide same resources for all modules coming from a single package
-    # (or at least the seem to provide) - it would be a waste of space to keep multiple
-    # instances of identical translation files in memory.
-    if isinstance(module_loader, (type(None), zipimport.zipimporter, pkgutil.ImpLoader)):
-        # __file__ is not set for interactive session
-        return 'f:' + os.path.dirname(getattr(module, '__file__', ''))
-    # Otherwise, let's assume that each module has independent resources
-    else:
-        return 'n:' + module.__name__
-
-
 _builder_cache = collections.defaultdict(dict)
 
 
 class PkgResourceLoader(SimpleLoader):
     def __init__(self, module_name, prefix):
         super(PkgResourceLoader, self).__init__()
-        if not prefix.endswith('/'):
-            prefix += '/'
+        prefix = resolve_simple_path('', prefix + '/')
 
         self._module_name = module_name
         self._prefix = prefix
-        self.cache = _builder_cache[(get_resource_key(module_name), prefix)]
+        self.cache = _builder_cache[(module_name, prefix)]
 
     def exists(self, path):
         return pkg_resources.resource_exists(self._module_name, self._prefix + path)
