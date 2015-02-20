@@ -7,13 +7,21 @@ from .globals import default_globals
 
 
 class Context(object):
-    def __init__(self, obj, globals=None, extra_globals=None, error_hook=None):
+    @staticmethod
+    def print_error_hook(exc_type, exc_value, exc_tb):
+        from .debug.stacktrace import print_exc_info
+        print_exc_info(exc_type, exc_value, exc_tb)
+
+    def __init__(self, obj, globals=None, extra_globals=None, error_hook=None, debug=False):
         if isinstance(obj, CompiledL20n):
             get_l20n = lambda: obj
         elif isinstance(obj, LazyCompiledL20n):
             get_l20n = obj.get
         else:
             raise TypeError('Invalid argument: {0!r}'.format(obj))
+
+        if debug and error_hook is None:
+            error_hook = self.print_error_hook
 
         self._vars = {}
         self._get_l20n = get_l20n
@@ -24,19 +32,23 @@ class Context(object):
         self._error_hook = error_hook
 
     @classmethod
-    def from_string(cls, s, loader=None, debug=False, **kwargs):
-        return cls(build_from_source(s, '', loader, debug=debug), **kwargs)
+    def from_string(cls, string, loader=None, debug=False, **kwargs):
+        return cls(build_from_source(string, '', loader, debug=debug), debug=debug, **kwargs)
 
     @classmethod
-    def from_file(cls, f, loader=None, debug=False, **kwargs):
-        if isinstance(f, basestring):
-                return cls(build_from_path(f, loader, debug=debug), **kwargs)
+    def from_file(cls, file, loader=None, debug=False, **kwargs):
+        if isinstance(file, basestring):
+                return cls(build_from_path(file, loader, debug=debug), debug=debug, **kwargs)
         else:
-            return cls(build_from_source(f.read(), '', loader, debug=debug), **kwargs)
+            return cls(
+                build_from_source(file.read(), getattr(file, 'name', ''), loader, debug=debug),
+                debug=debug,
+                **kwargs
+            )
 
     @classmethod
-    def from_module(cls, name, **kwargs):
-        return cls(build_from_module_lazy(name), **kwargs)
+    def from_module(cls, name, debug=False, **kwargs):
+        return cls(build_from_module_lazy(name, debug=debug), debug=debug, **kwargs)
 
     def __contains__(self, key):
         return key in self._vars

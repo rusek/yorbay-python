@@ -82,11 +82,9 @@ class LazyCompiledL20n(object):
 
 
 class CompiledL20n(object):
-    def __init__(self, entries):
+    def __init__(self, entries, direct_queries):
         self._entries = entries
-        self.direct_queries = {}
-        for entry in entries.itervalues():
-            entry.populate_direct_queries(self.direct_queries)
+        self.direct_queries = direct_queries
 
     def make_env(self, vars=None, globals=None):
         if vars is None:
@@ -605,6 +603,7 @@ class CompilerState(object):
     def __init__(self):
         self.entries = {}
         self.collected_entries = {}
+        self.direct_queries = {}
         self.import_uris = []
         self.import_cstates = []
         self._collecting = False
@@ -623,6 +622,10 @@ class CompilerState(object):
                 icstate.collect()
                 self.collected_entries.update(icstate.collected_entries)
             self.collected_entries.update(self.entries)
+
+            for entry in self.collected_entries.itervalues():
+                entry.populate_direct_queries(self.direct_queries)
+
             self._collected = True
         finally:
             self._collecting = False
@@ -644,7 +647,7 @@ def compile_syntax(l20n, debug=False):
 
 def link(cstate):
     cstate.collect()
-    return CompiledL20n(cstate.collected_entries)
+    return CompiledL20n(cstate.collected_entries, cstate.direct_queries)
 
 
 class Handlers(object):

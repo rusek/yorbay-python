@@ -610,7 +610,7 @@ class Parser(object):
                 raise self.error_expected('"," or "' + close_type + '"')
 
 
-def parse_source(source, path=None, debug=False):
+def parse_source(source, path='', debug=False):
     if debug:
         from .debug.parser import DebugTokenizer, DebugParser
 

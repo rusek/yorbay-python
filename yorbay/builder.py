@@ -70,7 +70,7 @@ class Builder(object):
         goal.import_goals = [self._get_goal(self._loader.prepare_import_path(path, ipath)) for ipath in import_paths]
 
 
-def build_from_source(source, path, loader=None, cache=None, debug=False):
+def build_from_source(source, path='', loader=None, cache=None, debug=False):
     with Builder(loader, cache, debug) as builder:
         goal = builder.get_anonymous_goal(source, path)
 
@@ -84,7 +84,7 @@ def build_from_path(path, loader=None, cache=None, debug=False):
     return link(goal.cstate)
 
 
-def build_from_standalone_source(source, path=None, debug=False):
+def build_from_standalone_source(source, path='', debug=False):
     cstate, import_paths, _ = compile_syntax(parse_source(source, path=path, debug=debug), debug=debug)
     if import_paths:
         raise BuilderError('Encountered imports in standalone build')

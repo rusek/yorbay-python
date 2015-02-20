@@ -1,3 +1,6 @@
+import sys
+import traceback
+
 from ..compiler import ErrorWithSource
 
 
@@ -22,7 +25,24 @@ def attach_stack(exc):
         return stack
 
 
-def format_exception(exc):
+def format_exc_info(exc_type, exc_value, exc_tb, limit=None):
+    if isinstance(exc_value, ErrorWithSource):
+        exc_value = exc_value.cause
+        exc_type = type(exc_value)
+
+    if get_stack(exc_value):
+        return format_exception(exc_value, limit)
+    else:
+        return ''.join(traceback.format_exception(exc_type, exc_value, exc_tb, limit))
+
+
+def print_exc_info(exc_type, exc_value, exc_tb, limit=None, file=None):
+    if file is None:
+        file = sys.stderr
+    file.write(format_exc_info(exc_type, exc_value, exc_tb, limit))
+
+
+def format_exception(exc, limit=None):
     if isinstance(exc, ErrorWithSource):
         exc = exc.cause
 
@@ -30,15 +50,34 @@ def format_exception(exc):
     stack = getattr(exc, 'yorbay_stack', None)
 
     if stack:
+        if limit is not None:
+            stack = stack[:limit]
+
         buf.append('Traceback (most recent call last):\n')
         for frame in reversed(stack):
-            buf.append('  File {0}, line {1} in {2} {3}\n'.format(
-                frame.pos.origin.path,
-                frame.pos.line + 1,
-                frame.entry_type,
-                frame.entry_name
-            ))
-            buf.append('    {0}\n'.format(frame.pos.origin.lines[frame.pos.line]))
+            pos = frame.pos
+            if pos is None:
+                buf.append('  In {0} {1}\n'.format(
+                    frame.entry_type,
+                    frame.entry_name
+                ))
+            else:
+                origin = pos.origin
+                if origin is None or not origin.path:
+                    buf.append('  Line {0} in {1} {2}\n'.format(
+                        pos.line + 1,
+                        frame.entry_type,
+                        frame.entry_name
+                    ))
+                else:
+                    buf.append('  File {0}, line {1} in {2} {3}\n'.format(
+                        origin.path,
+                        pos.line + 1,
+                        frame.entry_type,
+                        frame.entry_name
+                    ))
+                if origin is not None:
+                    buf.append('    {0}\n'.format(origin.lines[pos.line]))
 
     buf.append('{0}: {1}\n'.format(type(exc).__name__, exc))
 
