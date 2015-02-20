@@ -3,7 +3,9 @@
 import os
 import subprocess
 import sys
+import tempfile
 import unittest
+import zipfile
 
 DIR = os.path.dirname(os.path.abspath(__file__))
 
@@ -14,6 +16,38 @@ from yorbay.discovery import DiscoveryError
 
 # Taken from locale.getdefaultlocale
 locale_envvars = ('LC_ALL', 'LC_CTYPE', 'LANG', 'LANGUAGE')
+
+_sample_zip_path = None
+
+
+def get_sample_zip_path():
+    global _sample_zip_path
+    if _sample_zip_path is None:
+        fd, _sample_zip_path = tempfile.mkstemp('.zip', dir=os.path.dirname(DIR))
+        os.close(fd)
+
+        zipdir = os.path.join(DIR, 'samples', 'discovery')
+        arch = zipfile.ZipFile(_sample_zip_path, 'w')
+        try:
+            for root, dirs, files in os.walk(zipdir):
+                if root != zipdir:
+                    rel = os.path.relpath(root, zipdir)
+                else:
+                    rel = ''
+                for file in files:
+                    if file.endswith('.py') or file.endswith('.l20n'):
+                        arch.write(os.path.join(root, file), os.path.join(rel, file).replace(os.sep, '/'))
+        finally:
+            arch.close()
+
+    return _sample_zip_path
+
+
+def clean_sample_zip():
+    global _sample_zip_path
+    if _sample_zip_path is not None:
+        os.remove(_sample_zip_path)
+        _sample_zip_path = None
 
 
 class ExecutionError(Exception):
@@ -45,6 +79,9 @@ class TestStandardModuleLoader(unittest.TestCase):
     def execute(self, *args, **kwargs):
         return self._vexecute(args, **kwargs)
 
+    def _prog(self):
+        return '__main__.py'
+
     def _vexecute(self, args, lang=None):
         env = {}
         for k, v in os.environ.iteritems():
@@ -54,7 +91,7 @@ class TestStandardModuleLoader(unittest.TestCase):
             env['LANG'] = lang
 
         process = subprocess.Popen(
-            ('python', '__main__.py') + args,
+            ('python', self._prog()) + args,
             stdout=subprocess.PIPE,
             cwd=os.path.join(DIR, 'samples', 'discovery'),
             env=env,
@@ -72,7 +109,13 @@ class TestStandardModuleLoader(unittest.TestCase):
             return arg.strip()
 
 
-# TODO test zip importer
+class TestZipModuleLoader(TestStandardModuleLoader):
+    def _prog(self):
+        return get_sample_zip_path()
+
 
 if __name__ == '__main__':
-    unittest.main()
+    try:
+        unittest.main()
+    finally:
+        clean_sample_zip()
