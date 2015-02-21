@@ -69,12 +69,8 @@ Debug mode is a work in progress:
 
 ```python
 from yorbay import Context
-from yorbay.debug.stacktrace import format_exception
 
-def error_hook(exc_type, exc_value, tb):
-    print format_exception(exc_value),
-
-tr = Context.from_file("messages.l20n", error_hook=error_hook, debug=True)
+tr = Context.from_file("messages.l20n", debug=True)
 print tr("hello")
 
 ```
@@ -94,7 +90,7 @@ Traceback (most recent call last):
     <hello "Hello, {{yorbay}}!">
   File /home/yorbay/messages.l20n, line 1 in entity yorbay
     <yorbay {short: "Yorbay", long: "Yorbay translation framework"}>
-KeyError: 'Hash key lookup failed'
+HashError: Hash key lookup failed
 Hello, {{yorbay}}!
 
 ```
