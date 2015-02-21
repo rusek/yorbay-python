@@ -1,6 +1,8 @@
 import codecs
 import collections
+import os.path
 import pkgutil
+import sys
 
 pkg_resources = None  # lazily loaded, as it is not a part of standard library
 
@@ -114,6 +116,16 @@ class PkgResourcesDiscoverer(object):
 _builder_cache = collections.defaultdict(dict)
 
 
+def get_module_format_path_prefix(module_name):
+    try:
+        module = sys.modules[module_name]
+    except KeyError:
+        __import__(module_name)
+        module = sys.modules[module_name]
+    module_dir = os.path.dirname(getattr(module, '__file__', ''))
+    return module_dir + os.sep if module_dir else ''
+
+
 class PkgResourceLoader(SimpleLoader):
     def __init__(self, module_name, prefix):
         super(PkgResourceLoader, self).__init__()
@@ -121,6 +133,7 @@ class PkgResourceLoader(SimpleLoader):
 
         self._module_name = module_name
         self._prefix = prefix
+        self._format_prefix = get_module_format_path_prefix(module_name) + prefix.replace('/', os.sep)
         self.cache = _builder_cache[(module_name, prefix)]
 
     def exists(self, path):
@@ -131,3 +144,6 @@ class PkgResourceLoader(SimpleLoader):
             return codecs.decode(pkg_resources.resource_string(self._module_name, self._prefix + path), 'UTF-8')
         except StandardError as e:
             raise LoaderError(str(e))
+
+    def format_path(self, path):
+        return self._format_prefix + path.replace('/', os.sep)
