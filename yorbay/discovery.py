@@ -1,3 +1,5 @@
+from __future__ import unicode_literals
+
 import codecs
 import collections
 import os.path

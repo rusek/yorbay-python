@@ -1,4 +1,7 @@
 #!/usr/bin/env python
+# coding=utf-8
+
+from __future__ import unicode_literals
 
 import os
 from StringIO import StringIO
@@ -107,6 +110,14 @@ class TestFormatting(unittest.TestCase):
         get_stack(self.error)[:] = []
         out = format_exc_info(ErrorWithSource, ErrorWithSource(self.error, 'source'), self.exc_info[2])
         self.assertEqual(out, ''.join(traceback.format_exception(*self.exc_info)))
+
+    def test_unicode(self):
+        stack = [
+            Frame('entity', 'entity', Position(0, 0, Origin('ęą', 'łł.l20n')))
+        ]
+        attach_stack(self.error)[:] = stack
+        out = format_exception(self.error)
+        self.assertTrue(isinstance(out, unicode))
 
 
 class TestStackTraceAccess(unittest.TestCase):

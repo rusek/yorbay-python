@@ -1,3 +1,5 @@
+from __future__ import unicode_literals
+
 from .compiler import compile_syntax, link
 from .exceptions import BuildError
 from .loader import FsLoader

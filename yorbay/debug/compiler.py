@@ -1,3 +1,5 @@
+from __future__ import unicode_literals
+
 from ..compiler import (
     Resolvable, BoundEntity, CompiledEntity, BoundMacro, CompiledMacro, CompiledExpr, LazyHash,
     CompiledEntryAccess, CompiledGlobalAccess, CompiledLocalAccess, CompiledVariableAccess,

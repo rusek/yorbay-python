@@ -1,3 +1,5 @@
+from __future__ import unicode_literals
+
 import sys
 
 from .builder import build_from_path, build_from_source

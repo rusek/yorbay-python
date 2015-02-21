@@ -1,3 +1,5 @@
+from __future__ import unicode_literals
+
 def osa_distance(s1, s2):
     """
     Compute optimal string alignment distance between two strings.

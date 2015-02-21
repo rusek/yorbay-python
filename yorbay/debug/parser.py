@@ -1,3 +1,5 @@
+from __future__ import unicode_literals
+
 from ..parser import Tokenizer, Parser
 from .. import syntax
 

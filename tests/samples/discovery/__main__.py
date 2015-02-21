@@ -5,12 +5,8 @@ except ImportError:
 else:
     coverage.process_startup()
 
-import os
 import sys
 
-DIR = os.path.dirname(os.path.abspath(__file__))
-
-sys.path[:0] = [os.path.dirname(os.path.dirname(os.path.dirname(DIR)))]
 
 import yorbay
 from yorbay.exceptions import YorbayError

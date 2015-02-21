@@ -89,6 +89,7 @@ class TestStandardModuleLoader(unittest.TestCase):
                 env[k] = v
         if lang:
             env['LANG'] = lang
+        env['PYTHONPATH'] = os.path.dirname(DIR)
 
         process = subprocess.Popen(
             ('python', self._prog()) + args,
