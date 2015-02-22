@@ -9,7 +9,6 @@ import sys
 pkg_resources = None  # lazily loaded, as it is not a part of standard library
 
 from .builder import build_from_path
-from .compiler import LazyCompiledL20n
 from .exceptions import BuildError
 from .lang import get_fallback_chain, get_fallback_chain_with_generation
 from .loader import SimpleLoader, LoaderError, resolve_simple_path
@@ -71,13 +70,13 @@ def build_from_module(name, langs=None):
     return build_from_path(path, loader, cache=loader.cache)
 
 
-class LazyBuilder(LazyCompiledL20n):
+class LazyBuilder(object):
     def __init__(self, loader, debug):
         self._loader = loader
         self._cache = None, None
         self._debug = debug
 
-    def get(self):
+    def __call__(self):
         langs, gen = get_fallback_chain_with_generation()
 
         l20n, cached_gen = self._cache

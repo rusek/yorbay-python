@@ -3,7 +3,7 @@ from __future__ import unicode_literals
 import sys
 
 from .builder import build_from_path, build_from_source
-from .compiler import ErrorWithSource, CompiledL20n, LazyCompiledL20n
+from .compiler import ErrorWithSource, CompiledL20n
 from .discovery import build_from_module_lazy
 from .globals import default_globals
 
@@ -17,8 +17,8 @@ class Context(object):
     def __init__(self, obj, globals=None, extra_globals=None, error_hook=None, debug=False):
         if isinstance(obj, CompiledL20n):
             get_l20n = lambda: obj
-        elif isinstance(obj, LazyCompiledL20n):
-            get_l20n = obj.get
+        elif callable(obj):
+            get_l20n = obj
         else:
             raise TypeError('Invalid argument: {0!r}'.format(obj))
 
