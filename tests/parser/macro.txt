@@ -3,7 +3,7 @@
 ========================================== syntax(macroWithoutArgumentsSyntax)
 {
     "type": "L20n",
-    "entries": [
+    "body": [
         {
             "type": "Macro",
             "id": {
@@ -23,7 +23,7 @@
 ========================================== syntax(macroWithArgumentsSyntax)
 {
     "type": "L20n",
-    "entries": [
+    "body": [
         {
             "type": "Macro",
             "id": {

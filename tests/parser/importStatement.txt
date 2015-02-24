@@ -3,7 +3,7 @@ import('xyz')
 ========================================== syntax(importStatementSyntax)
 {
     "type": "L20n",
-    "entries": [
+    "body": [
         {
             "type": "ImportStatement",
             "uri": {

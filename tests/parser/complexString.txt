@@ -3,7 +3,7 @@
 ========================================== syntax(complexStringSyntax)
 {
     "type": "L20n",
-    "entries": [
+    "body": [
         {
             "type": "Entity",
             "id": {
@@ -31,7 +31,7 @@
 ========================================== syntax(multipartComplexStringStartingWithCharsSyntax)
 {
     "type": "L20n",
-    "entries": [
+    "body": [
         {
             "type": "Entity",
             "id": {
@@ -75,7 +75,7 @@
 ========================================== syntax(multipartComplexStringStartingWithPlaceholderSyntax)
 {
     "type": "L20n",
-    "entries": [
+    "body": [
         {
             "type": "Entity",
             "id": {
@@ -107,7 +107,7 @@
 ========================================== syntax(nestedComplexStringSyntax)
 {
     "type": "L20n",
-    "entries": [
+    "body": [
         {
             "type": "Entity",
             "id": {

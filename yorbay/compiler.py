@@ -648,7 +648,7 @@ def compile_syntax(l20n, debug=False):
     else:
         compiler = Compiler()
 
-    for entry in l20n.entries:
+    for entry in l20n.body:
         compiler.compile_entry(entry)
 
     cstate = compiler.cstate

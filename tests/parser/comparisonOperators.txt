@@ -55,7 +55,7 @@
 ========================================== wrapper(exprWrapper)
 {
     "type": "L20n",
-    "entries": [{
+    "body": [{
         "type": "Macro",
         "id": {"type": "Identifier", "name": "a"},
         "args": [],

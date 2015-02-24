@@ -5,7 +5,7 @@
 ========================================== syntax(numberSyntax)
 {
     "type": "L20n",
-    "entries": [
+    "body": [
         {
             "type": "Macro",
             "id": {

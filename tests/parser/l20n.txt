@@ -2,7 +2,7 @@
 ========================================== syntax(emptySyntax)
 {
     "type": "L20n",
-    "entries": []
+    "body": []
 }
 ========================================== badSource(nakedExpressionIsForbidden)
 2 + 2

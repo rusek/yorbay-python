@@ -3,7 +3,7 @@
 ========================================== syntax(commentSyntax)
 {
     "type": "L20n",
-    "entries": [
+    "body": [
         {
             "type": "Comment",
             "content": "abc"
@@ -15,7 +15,7 @@
 ========================================== syntax(commentStartingWithSlashSyntax)
 {
     "type": "L20n",
-    "entries": [
+    "body": [
         {
             "type": "Comment",
             "content": "/abc"
@@ -28,7 +28,7 @@ c*/
 ========================================== syntax(multiLineCommentSyntax)
 {
     "type": "L20n",
-    "entries": [
+    "body": [
         {
             "type": "Comment",
             "content": "ab\nc"
@@ -40,7 +40,7 @@ c*/
 ========================================== syntax(commentWithOpenInsideSyntax)
 {
     "type": "L20n",
-    "entries": [
+    "body": [
         {
             "type": "Comment",
             "content": "a/*bc"

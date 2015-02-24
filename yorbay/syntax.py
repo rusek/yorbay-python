@@ -6,8 +6,8 @@ Position = namedtuple('Position', ('line', 'column', 'origin'))
 
 
 class L20n(object):
-    def __init__(self, entries):
-        self.entries = entries
+    def __init__(self, body):
+        self.body = body
 
 
 class Identifier(object):
