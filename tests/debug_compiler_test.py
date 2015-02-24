@@ -37,7 +37,7 @@ class TestStackTrace(unittest.TestCase):
             return e
         self.fail()
 
-    def test_lazy_hash(self):
+    def test_lazy_hash_resolved_from_other_entity(self):
         self.build(
             '\n'
             '<myhash {key: "value"}>\n'
@@ -50,6 +50,12 @@ class TestStackTrace(unittest.TestCase):
         self.assertEqual(len(stack), 2)
         self.assertFrameEqual(stack[0], 'entity', 'myhash', 1, 8)
         self.assertFrameEqual(stack[1], 'entity', 'show', 3, 16)
+
+    # TODO currently this test fails
+    # def test_lazy_hash_directly_resolved(self):
+    #     self.build('<show {key: "value"}>')
+    #     stack = get_stack(self.resolve_exc('show'))
+    #     self.assertTrue(len(stack) == 1, msg=stack)
 
     def test_nested_expressions(self):
         self.build(

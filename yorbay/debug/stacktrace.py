@@ -91,3 +91,6 @@ class Frame(object):
         self.entry_type = entry_type
         self.entry_name = entry_name
         self.pos = pos
+
+    def __repr__(self):
+        return 'Frame({0!r}, {1!r}, {2!r}'.format(self.entry_type, self.entry_name, self.pos)

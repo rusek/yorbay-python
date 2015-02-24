@@ -563,10 +563,13 @@ class LazyHash(Resolvable):
         try:
             value = self._items[key]
         except KeyError:
-            return self.resolve_once()
+            return self._get_default([key])
         return value.evaluate(self._env)
 
     def resolve_once(self):
+        return self._get_default([])
+
+    def _get_default(self, tried):
         if self._index_item is not None:
             try:
                 key = self._index_item.evaluate_string(self._env)
@@ -575,14 +578,17 @@ class LazyHash(Resolvable):
             try:
                 value = self._items[key]
             except KeyError:
-                pass
+                tried.append(key)
             else:
                 return value.evaluate(self._env)
 
         if self._default is not None:
             return self._default.evaluate(self._env)
 
-        raise HashError('Hash key lookup failed')
+        if tried:
+            raise HashError('Hash key lookup failed. Tried: {0}'.format(', '.join(tried)))
+        else:
+            raise HashError('Hash has no default item assigned')
 
 
 class CompiledHash(CompiledExpr):
