@@ -3,48 +3,42 @@ from __future__ import unicode_literals
 import locale
 
 
-class Generation(object):
-    pass
+def get_lang_chain(lang):
+    chain = []
+    if lang != 'root':
+        pos = len(lang)
+        while pos != -1:
+            chain.append(lang[:pos])
+            pos = lang.rfind('_', 0, pos)
+    chain.append('root')
+    return chain
 
 
-_state = None, None
+_default_lang_cache = None
 
 
-def reset():
-    global _state
-    _state = None, None
+def get_default_lang():
+    global _default_lang_cache
+
+    lang = _default_lang_cache
+    if lang is None:
+        lang = locale.getlocale()[0] or locale.getdefaultlocale()[0] or 'root'
+        _default_lang_cache = lang
+    return lang
 
 
-def get_lang():
-    return get_fallback_chain_with_generation()[0][0]
+def reset_default_lang_cache():
+    global _default_lang_cache
+
+    _default_lang_cache = None
 
 
-def get_lang_with_generation():
-    langs, gen = get_fallback_chain_with_generation()
-    return langs[0], gen
-
-
-def get_fallback_chain():
-    return get_fallback_chain_with_generation()[0]
-
-
-def get_fallback_chain_with_generation():
-    global _state
-
-    langs, gen = _state
-    if gen is None:
-        langs, gen = _default()
-        _state = langs, gen
-
-    return langs, gen
-
-
-def _default():
-    lang = locale.getlocale()[0] or locale.getdefaultlocale()[0] or 'en'
-
-    parts = lang.split('_')
-    langs = ['_'.join(parts[:i]) for i in reversed(xrange(1, len(parts) + 1))]
-    if langs[-1] != 'en':
-        langs.append('en')
-
-    return langs, Generation()
+def prepare_lang_lazy(lang):
+    if lang is None:
+        return get_default_lang
+    elif isinstance(lang, basestring):
+        return lambda: lang
+    elif callable(lang):
+        return lang
+    else:
+        raise TypeError('Invalid lang type: {0!r}'.format(lang))

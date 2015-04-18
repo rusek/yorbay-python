@@ -10,7 +10,7 @@ pkg_resources = None  # lazily loaded, as it is not a part of standard library
 
 from .builder import build_from_path
 from .exceptions import BuildError
-from .lang import get_fallback_chain, get_fallback_chain_with_generation
+from .lang import get_lang_chain, prepare_lang_lazy
 from .loader import SimpleLoader, LoaderError, resolve_simple_path
 
 
@@ -55,9 +55,8 @@ def get_path(loader, langs):
     return None
 
 
-def build_from_module(name, langs=None):
-    if langs is None:
-        langs = get_fallback_chain()
+def build_from_module(name, lang=None):
+    langs = get_lang_chain(prepare_lang_lazy(lang)())
 
     loader = get_discovery_loader(name)
     if loader is None:
@@ -71,34 +70,31 @@ def build_from_module(name, langs=None):
 
 
 class LazyBuilder(object):
-    def __init__(self, loader, debug):
+    def __init__(self, loader, lang, debug):
         self._loader = loader
-        self._cache = None, None
+        self._get_lang = prepare_lang_lazy(lang)
+        self._cache = {}
         self._debug = debug
 
     def __call__(self):
-        langs, gen = get_fallback_chain_with_generation()
-
-        l20n, cached_gen = self._cache
-        if cached_gen is gen:
-            return l20n
-
-        path = get_path(self._loader, langs)
-        if path is None:
-            raise DiscoveryError('Could not find translations, tried languages: {0}'.format(langs))
-
-        l20n = build_from_path(path, self._loader, cache=self._loader.cache, debug=self._debug)
-        self._cache = l20n, gen
-
+        lang = self._get_lang()
+        l20n = self._cache.get(lang)
+        if l20n is None:
+            langs = get_lang_chain(lang)
+            path = get_path(self._loader, langs)
+            if path is None:
+                raise DiscoveryError('Could not find translations, tried languages: {0}'.format(langs))
+            l20n = build_from_path(path, self._loader, cache=self._loader.cache, debug=self._debug)
+            self._cache[lang] = l20n
         return l20n
 
 
-def build_from_module_lazy(name, debug=False):
+def build_from_module_lazy(name, lang=None, debug=False):
     loader = get_discovery_loader(name)
     if loader is None:
         raise DiscoveryError('Could not find suitable discovery loader for {0}'.format(name))
 
-    return LazyBuilder(loader, debug=debug)
+    return LazyBuilder(loader, lang, debug=debug)
 
 
 class PkgResourcesDiscoverer(object):

@@ -69,10 +69,10 @@ class TestStandardModuleLoader(unittest.TestCase):
             'pl_PL hello from discovery/sub/locale/pl_PL'
         )
 
-    def test_en_fallback(self):
+    def test_root_lookup(self):
         self.assertEqual(
             self.execute('tr', 'hello', lang=None),
-            'EN hello from discovery/locale',
+            'ROOT hello from discovery/locale',
         )
         self.assertRaises(DiscoveryError, self.execute, 'sub_mod1_tr', 'hello', lang='de_DE')
 

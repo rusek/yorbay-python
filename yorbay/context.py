@@ -49,8 +49,8 @@ class Context(object):
             )
 
     @classmethod
-    def from_module(cls, name, debug=False, **kwargs):
-        return cls(build_from_module_lazy(name, debug=debug), debug=debug, **kwargs)
+    def from_module(cls, name, lang=None, debug=False, **kwargs):
+        return cls(build_from_module_lazy(name, lang, debug=debug), debug=debug, **kwargs)
 
     def __contains__(self, key):
         return key in self._vars
