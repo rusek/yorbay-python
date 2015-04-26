@@ -13,12 +13,16 @@ from yorbay.exceptions import YorbayError
 
 from sub.mod1 import tr as sub_mod1_tr
 from sub.mod2 import tr as sub_mod2_tr
+from sub.sub3 import tr as sub_sub3_tr
+from sub.sub3.mod import tr as sub_sub3_mod_tr
 
 tr = yorbay.Context.from_module(__name__)
 
 funcs = dict(
     sub_mod1_tr=sub_mod1_tr,
     sub_mod2_tr=sub_mod2_tr,
+    sub_sub3_tr=sub_sub3_tr,
+    sub_sub3_mod_tr=sub_sub3_mod_tr,
     tr=tr
 )
 

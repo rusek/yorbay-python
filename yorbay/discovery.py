@@ -33,7 +33,7 @@ def get_discovery_loader(module_name):
     discoverer = PkgResourcesDiscoverer()
 
     if not is_package(module_name):
-        module_name = module_name.rsplit('.')[0]
+        module_name = module_name.rsplit('.', 1)[0]
 
     while True:
         discovery_loader = discoverer.get_discovery_loader(module_name, path)

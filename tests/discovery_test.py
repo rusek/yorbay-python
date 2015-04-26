@@ -68,6 +68,14 @@ class TestStandardModuleLoader(unittest.TestCase):
             self.execute('sub_mod2_tr', 'hello', lang='pl_PL'),
             'pl_PL hello from discovery/sub/locale/pl_PL'
         )
+        self.assertEqual(
+            self.execute('sub_sub3_tr', 'hello', lang='en'),
+            'en hello from discovery/sub/sub3/locale'
+        )
+        self.assertEqual(
+            self.execute('sub_sub3_mod_tr', 'hello', lang='en'),
+            'en hello from discovery/sub/sub3/locale'
+        )
 
     def test_root_lookup(self):
         self.assertEqual(
